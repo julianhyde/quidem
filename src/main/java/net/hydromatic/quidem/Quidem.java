@@ -628,9 +628,12 @@ public class Quidem {
         final ResultSet resultSet =
             statement.executeQuery("explain plan for " + sqlCommand.sql);
         final StringBuffer buf = new StringBuffer();
-        int i = 0;
         while (resultSet.next()) {
-          buf.append(resultSet.getString(1)).append("\n");
+          final String line = resultSet.getString(1);
+          buf.append(line);
+          if (!line.endsWith("\n")) {
+            buf.append("\n");
+          }
         }
         if (buf.length() == 0) {
           throw new AssertionError("explain returned 0 records");
