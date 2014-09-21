@@ -1,0 +1,4 @@
+quidem
+======
+
+Idempotent query scripts
