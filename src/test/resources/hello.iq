@@ -1,0 +1,4 @@
+# Simple Quidem script
+!use foodmart
+values 'Hello, world!';
+!ok
