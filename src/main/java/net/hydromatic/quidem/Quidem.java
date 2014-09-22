@@ -39,6 +39,18 @@ public class Quidem {
   public static final boolean DEBUG =
     "true".equals(System.getProperties().getProperty("quidem.debug"));
 
+  private static final String[] USAGE_LINES = {
+    "Usage: quidem argument... inFile outFile",
+    "",
+    "Arguments:",
+    "  --help",
+    "           Print usage",
+    "  --db name url user password",
+    "           Add a database to the connection factory",
+    "  --factory className",
+    "           Define a factory class"
+  };
+
   private BufferedReader reader;
   private Writer writer;
   private PrintWriter printWriter;
@@ -63,8 +75,77 @@ public class Quidem {
   }
 
   public static void main(String[] args) {
-    final File inFile = new File(args[0]);
-    final File outFile = new File(args[1]);
+    final PrintWriter pw = new PrintWriter(System.out);
+    try {
+      main2(Arrays.asList(args), pw);
+      pw.flush();
+    } catch (Throwable e) {
+      pw.flush();
+      e.printStackTrace();
+      System.exit(1);
+    }
+  }
+
+  public static void main2(List<String> args, PrintWriter out)
+      throws Exception {
+    final List<ConnectionFactory> factories = Lists.newArrayList();
+    int i;
+    for (i = 0; i < args.size();) {
+      String arg = args.get(i);
+      if (arg.equals("--help")) {
+        usage(out, null);
+        return;
+      }
+      if (arg.equals("--db")) {
+        if (i + 4 >= args.size()) {
+          usage(out, "Insufficient arguments for --db");
+          return;
+        }
+        final String name = args.get(i + 1);
+        final String url = args.get(i + 2);
+        final String user = args.get(i + 3);
+        final String password = args.get(i + 4);
+        factories.add(new SimpleConnectionFactory(name, url, user, password));
+        i += 5;
+        continue;
+      }
+      if (arg.equals("--factory")) {
+        if (i + 1 >= args.size()) {
+          usage(out, "Insufficient arguments for --factory");
+        }
+        final String className = args.get(i + 1);
+        final Class<?> factoryClass;
+        try {
+          factoryClass = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+          usage(out, "Factory class " + className + " not found");
+          return;
+        }
+        ConnectionFactory factory;
+        try {
+          factory = (ConnectionFactory) factoryClass.newInstance();
+        } catch (InstantiationException e) {
+          usage(out, "Error instantiating factory class " + className);
+          return;
+        } catch (IllegalAccessException e) {
+          usage(out, "Error instantiating factory class " + className);
+          return;
+        } catch (ClassCastException e) {
+          usage(out, "Error instantiating factory class " + className);
+          return;
+        }
+        factories.add(factory);
+        i += 2;
+        continue;
+      }
+      break;
+    }
+    if (i + 2 > args.size()) {
+      usage(out, "Insufficient arguments: need inFile and outFile");
+      return;
+    }
+    final File inFile = new File(args.get(i));
+    final File outFile = new File(args.get(i + 1));
     final Reader reader;
     try {
       reader = new LineNumberReader(new FileReader(inFile));
@@ -77,19 +158,21 @@ public class Quidem {
     } catch (IOException e) {
       throw new RuntimeException("Error opening output " + outFile, e);
     }
+    factories.add(new UnsupportedConnectionFactory());
     final Quidem quidem = new Quidem(new BufferedReader(reader), writer);
-    try {
-      quidem.execute(
-          new ConnectionFactory() {
-            public Connection connect(String name) {
-              throw new UnsupportedOperationException();
-            }
-          });
-      reader.close();
-      writer.close();
-    } catch (Throwable e) {
-      e.printStackTrace();
-      System.exit(1);
+
+    quidem.execute(new ChainingConnectionFactory(factories));
+    reader.close();
+    writer.close();
+  }
+
+  private static void usage(PrintWriter out, String error) {
+    if (error != null) {
+      out.println(error);
+      out.println();
+    }
+    for (String line : USAGE_LINES) {
+      out.println(line);
     }
   }
 
@@ -169,6 +252,57 @@ public class Quidem {
         return Quidem.chars(c, end - start);
       }
     };
+  }
+
+  /** Connection factory that recognizes a single name. */
+  private static class SimpleConnectionFactory implements ConnectionFactory {
+    private final String name;
+    private final String url;
+    private final String user;
+    private final String password;
+
+    public SimpleConnectionFactory(String name, String url, String user,
+        String password) {
+      this.name = name;
+      this.url = url;
+      this.user = user;
+      this.password = password;
+    }
+
+    @Override public Connection connect(String name) throws Exception {
+      if (name.equals(this.name)) {
+        return DriverManager.getConnection(url, user, password);
+      }
+      return null;
+    }
+  }
+
+  /** Connection factory that says all databases are unknown. */
+  private static class UnsupportedConnectionFactory
+      implements ConnectionFactory {
+    public Connection connect(String name) {
+      throw new RuntimeException("Unknown database: " + name);
+    }
+  }
+
+  /** Connection factory that tries several factories, returning a connection
+   * from the first that is able to connect. */
+  private static class ChainingConnectionFactory implements ConnectionFactory {
+    private final List<ConnectionFactory> factories;
+
+    public ChainingConnectionFactory(List<ConnectionFactory> factories) {
+      this.factories = ImmutableList.copyOf(factories);
+    }
+
+    @Override public Connection connect(String name) throws Exception {
+      for (ConnectionFactory factory : factories) {
+        Connection c = factory.connect(name);
+        if (c != null) {
+          return c;
+        }
+      }
+      return null;
+    }
   }
 
   /** Parser. */

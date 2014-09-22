@@ -19,16 +19,17 @@ package net.hydromatic.quidem;
 import org.hamcrest.*;
 import org.hamcrest.core.SubstringMatcher;
 
-import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.BufferedReader;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.io.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.util.Arrays;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.startsWith;
+import static org.junit.Assert.assertThat;
 
 /**
  * Unit test for {@link Quidem}.
@@ -101,29 +102,25 @@ public class QuidemTest {
         + "\n",
         matches(
             "(?s)!use foodmart\n"
-            + "values \\(1\\), \\(2\\);\n"
-            + "isDistinctSelect=.*"
-            + "!plan\n"
-            + "\n"));
+                + "values \\(1\\), \\(2\\);\n"
+                + "isDistinctSelect=.*"
+                + "!plan\n"
+                + "\n"));
   }
 
   @Test public void testPlanAfterOk() {
     check(
-        "!use foodmart\n"
-        + "values (1), (2);\n"
-        + "!ok\n"
-        + "!plan\n"
-        + "\n",
+        "!use foodmart\n" + "values (1), (2);\n" + "!ok\n" + "!plan\n" + "\n",
         matches(
             "(?s)!use foodmart\n"
-            + "values \\(1\\), \\(2\\);\n"
-            + "C1\n"
-            + "1\n"
-            + "2\n"
-            + "!ok\n"
-            + "isDistinctSelect=.*"
-            + "!plan\n"
-            + "\n"));
+                + "values \\(1\\), \\(2\\);\n"
+                + "C1\n"
+                + "1\n"
+                + "2\n"
+                + "!ok\n"
+                + "isDistinctSelect=.*"
+                + "!plan\n"
+                + "\n"));
   }
 
   /** It is OK to have consecutive '!plan' calls and no '!ok'.
@@ -162,12 +159,12 @@ public class QuidemTest {
         + "\n",
         containsString(
             "!use foodmart\n"
-            + "values (1), (2);\n"
-            + "C1\n"
-            + "1\n"
-            + "2\n"
-            + "!ok\n"
-            + "\n"));
+                + "values (1), (2);\n"
+                + "C1\n"
+                + "1\n"
+                + "2\n"
+                + "!ok\n"
+                + "\n"));
   }
 
   /** Content inside a '!plan' command, that needs to be matched. */
@@ -182,14 +179,14 @@ public class QuidemTest {
         + "\n",
         matches(
             "(?s)!use foodmart\n"
-            + "values \\(1\\), \\(2\\);\n"
-            + "isDistinctSelect=.*\n"
-            + "!plan\n"
-            + "C1\n"
-            + "1\n"
-            + "2\n"
-            + "!ok\n"
-            + "\n"));
+                + "values \\(1\\), \\(2\\);\n"
+                + "isDistinctSelect=.*\n"
+                + "!plan\n"
+                + "C1\n"
+                + "1\n"
+                + "2\n"
+                + "!ok\n"
+                + "\n"));
   }
 
   @Test public void testIfFalse() {
@@ -204,13 +201,13 @@ public class QuidemTest {
         + "\n",
         containsString(
             "!use foodmart\n"
-            + "!if (false) {\n"
-            + "values (1), (2);\n"
-            + "anything\n"
-            + "you like\n"
-            + "!plan\n"
-            + "!}\n"
-            + "\n"));
+                + "!if (false) {\n"
+                + "values (1), (2);\n"
+                + "anything\n"
+                + "you like\n"
+                + "!plan\n"
+                + "!}\n"
+                + "\n"));
   }
 
   @Test public void testIfTrue() {
@@ -225,18 +222,96 @@ public class QuidemTest {
         + "\n",
         containsString(
             "!use foodmart\n"
-            + "!if (true) {\n"
-            + "values (1), (2);\n"
-            + "C1\n"
-            + "1\n"
-            + "2\n"
-            + "!ok\n"
-            + "!}\n"
-            + "\n"));
+                + "!if (true) {\n"
+                + "values (1), (2);\n"
+                + "C1\n"
+                + "1\n"
+                + "2\n"
+                + "!ok\n"
+                + "!}\n"
+                + "\n"));
+  }
+
+  @Test public void testUsage() throws Exception {
+    final Matcher<String> matcher =
+        startsWith("Usage: quidem argument... inFile outFile");
+    checkMain(matcher, "--help");
+  }
+
+  @Test public void testDbBad() throws Exception {
+    checkMain(startsWith("Insufficient arguments for --db"),
+        "--db", "name", "jdbc:url");
+  }
+
+  @Test public void testDb() throws Exception {
+    final File inFile =
+        writeFile("!use fm\nselect * from \"foodmart\".\"days\";\n!ok\n");
+    final File outFile = File.createTempFile("outFile", ".iq");
+    final Matcher<String> matcher = equalTo("");
+    checkMain(matcher, "--db", "fm", "jdbc:hsqldb:res:foodmart", "FOODMART",
+        "FOODMART", inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThat(contents(outFile),
+        equalTo(
+            "!use fm\nselect * from \"foodmart\".\"days\";\nday, week_day\n1, Sunday\n2, Monday\n5, Thursday\n4, Wednesday\n3, Tuesday\n6, Friday\n7, Saturday\n!ok\n"));
+    inFile.delete();
+    outFile.delete();
+  }
+
+  private File writeFile(String contents) throws IOException {
+    final File inFile = File.createTempFile("inFile", ".iq");
+    final FileWriter fw = new FileWriter(inFile);
+    fw.append(contents);
+    fw.close();
+    return inFile;
+  }
+
+  @Test public void testFactoryBad() throws Exception {
+    checkMain(startsWith("Factory class non.existent.ClassName not found"),
+        "--factory", "non.existent.ClassName");
+  }
+
+  @Test public void testFactoryBad2() throws Exception {
+    checkMain(startsWith("Error instantiating factory class java.lang.String"),
+        "--factory", "java.lang.String");
+  }
+
+  @Test public void testFactory() throws Exception {
+    final File inFile =
+        writeFile("!use foo\nvalues 1;\n!ok\n");
+    final File outFile = File.createTempFile("outFile", ".iq");
+    checkMain(equalTo(""), "--factory", FooFactory.class.getName(),
+        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThat(contents(outFile),
+        equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
+    inFile.delete();
+    outFile.delete();
+  }
+
+  private void checkMain(Matcher<String> matcher, String... args)
+      throws Exception {
+    final StringWriter sw = new StringWriter();
+    final PrintWriter pw = new PrintWriter(sw);
+    Quidem.main2(Arrays.asList(args), pw);
+    pw.close();
+    assertThat(sw.toString(), matcher);
   }
 
   static void check(String input, String expected) {
     check(input, CoreMatchers.equalTo(expected));
+  }
+
+  static String contents(File file) throws IOException {
+    final FileReader reader = new FileReader(file);
+    final StringWriter sw = new StringWriter();
+    final char[] buf = new char[1024];
+    for (;;) {
+      final int read = reader.read(buf, 0, 1024);
+      if (read < 0) {
+        break;
+      }
+      sw.write(buf, 0, read);
+    }
+    return sw.toString();
   }
 
   static void check(String input, Matcher<String> matcher) {
@@ -256,7 +331,7 @@ public class QuidemTest {
         });
     writer.flush();
     String out = toLinux(writer.toString());
-    Assert.assertThat(out, matcher);
+    assertThat(out, matcher);
   }
 
   public static String toLinux(String s) {
@@ -278,6 +353,16 @@ public class QuidemTest {
 
     @Override protected String relationship() {
       return "matching";
+    }
+  }
+
+  public static class FooFactory implements Quidem.ConnectionFactory {
+    @Override public Connection connect(String name) throws Exception {
+      if (name.equals("foo")) {
+        return DriverManager.getConnection("jdbc:hsqldb:res:foodmart",
+            "FOODMART", "FOODMART");
+      }
+      return null;
     }
   }
 }
