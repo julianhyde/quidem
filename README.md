@@ -256,7 +256,23 @@ Connection details such as URLs, username, password and preferred
 driver are presumably provided within the connection factory.
 Including them within the script would not be portable or maintainable.
 
-## Download and build
+## Get Quidem
+
+### From Maven
+
+Get Quidem from the
+<a href="http://conjars.org/net.hydromatic/quidem">conjars.org</a>
+maven repository:
+
+```xml
+<dependency>
+  <groupId>net.hydromatic</groupId>
+  <artifactId>quidem</artifactId>
+  <version>0.1.1</version>
+</dependency>
+```
+
+### Download and build
 
 You need Java (1.6 or higher; 1.8 preferred), git and maven (3.2.1 or higher).
 
@@ -273,6 +289,9 @@ $ mvn compile
 * Blog: http://julianhyde.blogspot.com
 * Project page: http://www.hydromatic.net/quidem
 * Source code: http://github.com/julianhyde/quidem
-* Developers list: <a href="mailto:dev@optiq.incubator.apache.org">dev at optiq.incubator.apache.org</a> (<a href="http://mail-archives.apache.org/mod_mbox/incubator-optiq-dev/">archive</a>, <a href="mailto:dev-subscribe@optiq.incubator.apache.org">subscribe</a>)
+* Developers list:
+  <a href="mailto:dev@optiq.incubator.apache.org">dev at optiq.incubator.apache.org</a>
+  (<a href="http://mail-archives.apache.org/mod_mbox/incubator-optiq-dev/">archive</a>,
+  <a href="mailto:dev-subscribe@optiq.incubator.apache.org">subscribe</a>)
 * Issues: https://github.com/julianhyde/quidem/issues
 * <a href="HISTORY.md">Release notes and history</a>
