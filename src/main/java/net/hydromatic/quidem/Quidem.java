@@ -449,29 +449,35 @@ public class Quidem {
   /** Schemes for converting the output of a SQL statement into text. */
   enum OutputFormat {
     CSV {
-      @Override
-      public void format(ResultSet resultSet, List<String> headerLines,
-          List<String> bodyLines, List<String> footerLines, Quidem run)
-          throws Exception {
+      @Override public void format(ResultSet resultSet,
+          List<String> headerLines, List<String> bodyLines,
+          List<String> footerLines, Quidem run) throws Exception {
         final ResultSetMetaData metaData = resultSet.getMetaData();
-        final PrintWriter pw = run.printWriter;
         final int n = metaData.getColumnCount();
+        final StringBuilder buf = new StringBuilder();
         for (int i = 0; i < n; i++) {
           if (i > 0) {
-            pw.print(", ");
+            buf.append(", ");
           }
-          pw.print(metaData.getColumnLabel(i + 1));
+          buf.append(metaData.getColumnLabel(i + 1));
         }
-        pw.println();
+        headerLines.add(buf.toString());
+        buf.setLength(0);
+        final List<String> lines = Lists.newArrayList();
         while (resultSet.next()) {
           for (int i = 0; i < n; i++) {
             if (i > 0) {
-              pw.print(", ");
+              buf.append(", ");
             }
-            pw.print(resultSet.getString(i + 1));
+            buf.append(resultSet.getString(i + 1));
           }
-          pw.println();
+          lines.add(buf.toString());
+          buf.setLength(0);
         }
+        if (run.sort) {
+          Collections.sort(lines);
+        }
+        bodyLines.addAll(lines);
       }
     },
 
@@ -483,10 +489,9 @@ public class Quidem {
     //  Bob   |     10 | M      | Jane
     // (2 rows)
     PSQL {
-      @Override
-      public void format(ResultSet resultSet, List<String> headerLines,
-          List<String> bodyLines, List<String> footerLines, Quidem run)
-          throws Exception {
+      @Override public void format(ResultSet resultSet,
+          List<String> headerLines, List<String> bodyLines,
+          List<String> footerLines, Quidem run) throws Exception {
         Quidem.format(
             resultSet, headerLines, bodyLines, footerLines, run.sort, false);
       }
@@ -502,10 +507,9 @@ public class Quidem {
     // +-------+--------+--------+-------------+
     // (2 rows)
     MYSQL {
-      @Override
-      public void format(ResultSet resultSet, List<String> headerLines,
-          List<String> bodyLines, List<String> footerLines, Quidem run)
-          throws Exception {
+      @Override public void format(ResultSet resultSet,
+          List<String> headerLines, List<String> bodyLines,
+          List<String> footerLines, Quidem run) throws Exception {
         Quidem.format(
             resultSet, headerLines, bodyLines, footerLines, run.sort, true);
       }
@@ -712,8 +716,16 @@ public class Quidem {
           // Print all lines that occurred in the actual output ("bodyLines"),
           // but in their original order ("lines").
           for (String line : lines) {
-            if (bodyLines.remove(line)) {
-              printWriter.println(line);
+            if (sort) {
+              if (bodyLines.remove(line)) {
+                printWriter.println(line);
+              }
+            } else {
+              if (!bodyLines.isEmpty()
+                  && bodyLines.get(0).equals(line)) {
+                bodyLines.remove(0);
+                printWriter.println(line);
+              }
             }
           }
           // Print lines that occurred in the actual output but not original.

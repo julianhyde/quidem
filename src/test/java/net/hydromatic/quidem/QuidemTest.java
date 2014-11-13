@@ -167,6 +167,143 @@ public class QuidemTest {
                 + "\n"));
   }
 
+  /** If the statement contains 'order by', result is not re-ordered to match
+   * the input string. */
+  @Test public void testOkOrderBy() {
+    // In (2, 1), out (1, 2). Test gives a diff (correctly).
+    check("!use foodmart\n"
+        + "select * from (values (1), (2)) as t(c) order by 1;\n"
+        + "C\n"
+        + "2\n"
+        + "1\n"
+        + "!ok\n"
+        + "\n",
+        containsString(
+            "!use foodmart\n"
+                + "select * from (values (1), (2)) as t(c) order by 1;\n"
+                + "C\n"
+                + "1\n"
+                + "2\n"
+                + "!ok\n"
+                + "\n"));
+    // In (1, 2), out (1, 2). Test passes.
+    check("!use foodmart\n"
+        + "select * from (values (1), (2)) as t(c) order by 1;\n"
+        + "C\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "\n",
+        containsString(
+            "!use foodmart\n"
+                + "select * from (values (1), (2)) as t(c) order by 1;\n"
+                + "C\n"
+                + "1\n"
+                + "2\n"
+                + "!ok\n"
+                + "\n"));
+  }
+
+  /** As {@link #testOkOrderBy()} but for MySQL. */
+  @Test public void testOkOrderByMySQL() {
+    // In (2, 1), out (1, 2). Test gives a diff (correctly).
+    check("!use foodmart\n"
+        + "!set outputformat mysql\n"
+        + "select * from (values (1), (2)) as t(c) order by 1;\n"
+        + "+---+\n"
+        + "| C |\n"
+        + "+---+\n"
+        + "| 2 |\n"
+        + "| 1 |\n"
+        + "+---+\n"
+        + "(2 rows)\n"
+        + "\n"
+        + "!ok\n"
+        + "\n",
+        containsString(
+            "!use foodmart\n"
+                + "!set outputformat mysql\n"
+                + "select * from (values (1), (2)) as t(c) order by 1;\n"
+                + "+---+\n"
+                + "| C |\n"
+                + "+---+\n"
+                + "| 1 |\n"
+                + "| 2 |\n"
+                + "+---+\n"
+                + "(2 rows)\n"
+                + "\n"
+                + "!ok\n"
+                + "\n"));
+    // In (1, 2), out (1, 2). Test passes.
+    check("!use foodmart\n"
+        + "!set outputformat mysql\n"
+        + "select * from (values (1), (2)) as t(c) order by 1;\n"
+        + "+---+\n"
+        + "| C |\n"
+        + "+---+\n"
+        + "| 1 |\n"
+        + "| 2 |\n"
+        + "+---+\n"
+        + "(2 rows)\n"
+        + "\n"
+        + "!ok\n"
+        + "\n",
+        containsString(
+            "!use foodmart\n"
+                + "!set outputformat mysql\n"
+                + "select * from (values (1), (2)) as t(c) order by 1;\n"
+                + "+---+\n"
+                + "| C |\n"
+                + "+---+\n"
+                + "| 1 |\n"
+                + "| 2 |\n"
+                + "+---+\n"
+                + "(2 rows)\n"
+                + "\n"
+                + "!ok\n"
+                + "\n"));
+  }
+
+  /** If the statement does not contain 'order by', result is re-ordered to
+   * match the input string. */
+  @Test public void testOkNoOrderBy() {
+    // In (2, 1), out (2, 1). Result would be correct in either order, but
+    // we output in the original order, so as not to cause a diff.
+    check(
+        "!use foodmart\n"
+        + "select * from (values (1), (2)) as t(c);\n"
+        + "C\n"
+        + "2\n"
+        + "1\n"
+        + "!ok\n"
+        + "\n",
+        containsString(
+            "!use foodmart\n"
+                + "select * from (values (1), (2)) as t(c);\n"
+                + "C\n"
+                + "2\n"
+                + "1\n"
+                + "!ok\n"
+                + "\n"));
+    // In (1, 2), out (1, 2).
+    check(
+        "!use foodmart\n"
+        + "select * from (values (1), (2)) as t(c);\n"
+        + "C\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "\n",
+        containsString(
+            "!use foodmart\n"
+                + "select * from (values (1), (2)) as t(c);\n"
+                + "C\n"
+                + "1\n"
+                + "2\n"
+                + "!ok\n"
+                + "\n"));
+  }
+
   /** Content inside a '!plan' command, that needs to be matched. */
   @Test public void testPlanContent() {
     check(
@@ -252,7 +389,7 @@ public class QuidemTest {
         "FOODMART", inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(contents(outFile),
         equalTo(
-            "!use fm\nselect * from \"foodmart\".\"days\";\nday, week_day\n1, Sunday\n2, Monday\n5, Thursday\n4, Wednesday\n3, Tuesday\n6, Friday\n7, Saturday\n!ok\n"));
+            "!use fm\nselect * from \"foodmart\".\"days\";\nday, week_day\n1, Sunday\n2, Monday\n3, Tuesday\n4, Wednesday\n5, Thursday\n6, Friday\n7, Saturday\n!ok\n"));
     inFile.delete();
     outFile.delete();
   }
