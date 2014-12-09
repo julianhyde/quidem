@@ -543,7 +543,15 @@ public class Quidem {
     }
     for (int i = 0; i < widths.length; i++) {
       switch (metaData.getColumnType(i + 1)) {
+      case Types.TINYINT:
+      case Types.SMALLINT:
       case Types.INTEGER:
+      case Types.BIGINT:
+      case Types.FLOAT:
+      case Types.REAL:
+      case Types.DOUBLE:
+      case Types.NUMERIC:
+      case Types.DECIMAL:
         rights[i] = true;
       }
     }

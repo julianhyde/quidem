@@ -55,7 +55,7 @@ public class QuidemTest {
         + "+----+\n"
         + "| C1 |\n"
         + "+----+\n"
-        + "| 7  |\n"
+        + "|  7 |\n"
         + "+----+\n"
         + "(1 row)\n"
         + "\n"
@@ -367,6 +367,54 @@ public class QuidemTest {
                 + "!ok\n"
                 + "!}\n"
                 + "\n"));
+  }
+
+  @Test public void testJustify() {
+    check(
+        "!use foodmart\n"
+            + "select true as b00000,\n"
+            + "  cast(1 as tinyint) as t000,\n"
+            + "  cast(1 as integer) as i000,\n"
+            + "  cast(1 as float) as f00000,\n"
+            + "  cast(1 as double) as d00000,\n"
+            + "  cast(1 as varchar(3)) as v003\n"
+            + "from (values (1));\n"
+            + "!set outputformat mysql\n"
+            + "!ok\n"
+            + "!set outputformat psql\n"
+            + "!ok\n"
+            + "!set outputformat csv\n"
+            + "!ok\n"
+            + "\n",
+        containsString("!use foodmart\n"
+            + "select true as b00000,\n"
+            + "  cast(1 as tinyint) as t000,\n"
+            + "  cast(1 as integer) as i000,\n"
+            + "  cast(1 as float) as f00000,\n"
+            + "  cast(1 as double) as d00000,\n"
+            + "  cast(1 as varchar(3)) as v003\n"
+            + "from (values (1));\n"
+            + "!set outputformat mysql\n"
+            + "+--------+------+------+--------+--------+------+\n"
+            + "| B00000 | T000 | I000 | F00000 | D00000 | V003 |\n"
+            + "+--------+------+------+--------+--------+------+\n"
+            + "| TRUE   |    1 |    1 |  1.0E0 |  1.0E0 | 1    |\n"
+            + "+--------+------+------+--------+--------+------+\n"
+            + "(1 row)\n"
+            + "\n"
+            + "!ok\n"
+            + "!set outputformat psql\n"
+            + " B00000 | T000 | I000 | F00000 | D00000 | V003\n"
+            + "--------+------+------+--------+--------+------\n"
+            + " TRUE   |    1 |    1 |  1.0E0 |  1.0E0 | 1\n"
+            + "(1 row)\n"
+            + "\n"
+            + "!ok\n"
+            + "!set outputformat csv\n"
+            + "B00000, T000, I000, F00000, D00000, V003\n"
+            + "TRUE, 1, 1, 1.0E0, 1.0E0, 1\n"
+            + "!ok\n"
+            + "\n"));
   }
 
   @Test public void testUsage() throws Exception {
