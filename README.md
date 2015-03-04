@@ -110,7 +110,7 @@ SQL statements, tend to require only local changes to that part of the file,
 and therefore Quidem scripts are friendly to patches, merges and parallel development.
 
 For more examples, look at the `.oq` files in the
-<a href="https://github.com/apache/incubator-optiq/tree/master/core/src/test/resources/sql">Apache Optiq</a>
+<a href="https://github.com/apache/incubator-calcite/tree/master/core/src/test/resources/sql">Apache Calcite</a>
 project.
 
 ## Run
@@ -284,14 +284,14 @@ $ mvn compile
 
 ## More information
 
-* License: Apache License, Version 2.0.
+* License: Apache License, Version 2.0
 * Author: Julian Hyde
 * Blog: http://julianhyde.blogspot.com
 * Project page: http://www.hydromatic.net/quidem
 * Source code: http://github.com/julianhyde/quidem
 * Developers list:
-  <a href="mailto:dev@optiq.incubator.apache.org">dev at optiq.incubator.apache.org</a>
-  (<a href="http://mail-archives.apache.org/mod_mbox/incubator-optiq-dev/">archive</a>,
-  <a href="mailto:dev-subscribe@optiq.incubator.apache.org">subscribe</a>)
+  <a href="mailto:dev@calcite.incubator.apache.org">dev at calcite.incubator.apache.org</a>
+  (<a href="http://mail-archives.apache.org/mod_mbox/incubator-calcite-dev/">archive</a>,
+  <a href="mailto:dev-subscribe@calcite.incubator.apache.org">subscribe</a>)
 * Issues: https://github.com/julianhyde/quidem/issues
 * <a href="HISTORY.md">Release notes and history</a>

@@ -20,14 +20,14 @@ For a full list of releases, see <a href="https://github.com/julianhyde/quidem/r
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.1">0.1</a> / 2014-09-21
 
 * Convert test suite to hsqldb
-* [<a href="https://issues.apache.org/jira/browse/OPTIQ-376">OPTIQ-376</a>]
-  Rename from SqlRun to Quidem and factor out of Optiq as separate project
+* [<a href="https://issues.apache.org/jira/browse/CALCITE-376">CALCITE-376</a>]
+  Rename from SqlRun to Quidem and factor out of Calcite as separate project
 * Fix connection leak
 * Carry on after certain errors (e.g. `AssertionError`)
 * Add '`if (true)`' command
 * Allow '`!plan`' after '`!ok`' for same SQL statement
 * Add '`!plan`' command
-* [<a href="https://issues.apache.org/jira/browse/OPTIQ-318">OPTIQ-318</a>]
+* [<a href="https://issues.apache.org/jira/browse/CALCITE-318">CALCITE-318</a>]
   Add unit test for SqlRun
 * Match output regardless of order if `ORDER BY` not present
 * Add '`!skip`' command

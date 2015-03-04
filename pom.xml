@@ -18,8 +18,9 @@
   </organization>
   <licenses>
     <license>
-      <name>Apache 2</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
     </license>
   </licenses>
 
@@ -27,7 +28,7 @@
     <developer>
       <id>julianhyde</id>
       <name>Julian Hyde</name>
-      <email>julianhyde@gmail.com</email>
+      <email>jhyde@apache.org</email>
       <url>https://github.com/julianhyde</url>
       <roles>
         <role>architect</role>

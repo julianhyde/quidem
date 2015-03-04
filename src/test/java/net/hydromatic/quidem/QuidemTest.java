@@ -110,7 +110,11 @@ public class QuidemTest {
 
   @Test public void testPlanAfterOk() {
     check(
-        "!use foodmart\n" + "values (1), (2);\n" + "!ok\n" + "!plan\n" + "\n",
+        "!use foodmart\n"
+        + "values (1), (2);\n"
+        + "!ok\n"
+        + "!plan\n"
+        + "\n",
         matches(
             "(?s)!use foodmart\n"
                 + "values \\(1\\), \\(2\\);\n"
