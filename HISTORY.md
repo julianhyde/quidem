@@ -2,6 +2,13 @@
 
 For a full list of releases, see <a href="https://github.com/julianhyde/quidem/releases">github</a>.
 
+## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.3">0.3</a> / 2015-03-04
+
+* Set distribution repository to Maven central rather than Conjars
+* Sign jars
+* Fix license URL
+* Rename a few last Optiq to Calcite
+
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.2">0.2</a> / 2014-12-09
 
 * [<a href="https://github.com/julianhyde/quidem/issues/2">QUIDEM-2</a>]
