@@ -19,6 +19,7 @@ package net.hydromatic.quidem;
 import org.hamcrest.*;
 import org.hamcrest.core.SubstringMatcher;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.*;
@@ -470,6 +471,31 @@ public class QuidemTest {
                 + "you like\n"
                 + "!error\n"
                 + "\n");
+  }
+
+  @Ignore // TODO: fixme
+  @Test public void testSqlIfFalsePlan() {
+    check(
+        "!use foodmart\n"
+        + "values 1;\n"
+        + "!if (false) {\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "something\n"
+        + "!plan\n"
+        + "\n",
+        containsString(
+            "!use foodmart\n"
+                + "!if (true) {\n"
+                + "values (1), (2);\n"
+                + "C1\n"
+                + "1\n"
+                + "2\n"
+                + "!ok\n"
+                + "!}\n"
+                + "\n"));
   }
 
   @Test public void testJustify() {
