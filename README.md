@@ -147,6 +147,38 @@ Queries may span multiple lines, and must be terminated with a semi-colon, ';'.
 
 The same query may be used by several `!ok` and `!plan` commands.
 
+### `!error`
+
+Executes the current query and checks that it returns a particular error.
+
+The command succeeds if the expected error is non-empty and occurs somewhere
+within the actual error stack. Spaces and line endings do not need to match
+exactly.
+
+Example:
+
+```bash
+# Match just the error message
+select blah from blah;
+user lacks privilege or object not found: BLAH
+!error
+
+# Match the error class, message and the first few lines of the stack
+select blah from blah;
+java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH
+  at org.hsqldb.jdbc.JDBCUtil.sqlException(Unknown Source)
+  at org.hsqldb.jdbc.JDBCUtil.sqlException(Unknown Source)
+!error
+```
+
+The `!error` command fails, and prints the full error stack, if:
+* the SQL statement does not give an error, or
+* the expected error is empty, or
+* actual error does not match the expected error
+
+You can then edit the stack, or cut it down to just the parts of
+the message that you care about.
+
 ### `!if (condition)`
 
 Condition must be `true` or `false`.
@@ -244,6 +276,14 @@ Bob,10,M,Jane
 (2 rows)
 !ok
 ```
+
+### `!skip`
+
+Switches to a mode where we skip executing the rest of the
+input. The input is still printed.
+
+The effect is similar to enclosing the remainder of the script in an
+`!if (false) {` ... `!}` block.
 
 ### `!use <db>`
 
