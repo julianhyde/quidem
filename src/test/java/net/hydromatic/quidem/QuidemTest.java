@@ -421,6 +421,32 @@ public class QuidemTest {
             + "\n"));
   }
 
+  /** Test case for
+   * <a href="https://github.com/julianhyde/quidem/issues/3">[QUIDEM-3]
+   * Trailing spaces in psql output format</a>. */
+  @Test public void testColumnHeading() {
+    // Note: There must not be trailing spaces after 'DEPTNO | B'
+    check(
+        "!use scott\n"
+            + "!set outputformat psql\n"
+            + "select deptno, deptno > 20 as b from scott.dept order by 1;\n"
+            + "!ok\n"
+            + "\n",
+        containsString("!use scott\n"
+                + "!set outputformat psql\n"
+                + "select deptno, deptno > 20 as b from scott.dept order by 1;\n"
+                + " DEPTNO | B\n"
+                + "--------+-------\n"
+                + "     10 | FALSE\n"
+                + "     20 | FALSE\n"
+                + "     30 | TRUE\n"
+                + "     40 | TRUE\n"
+                + "(4 rows)\n"
+                + "\n"
+                + "!ok\n"
+                + "\n"));
+  }
+
   @Test public void testUsage() throws Exception {
     final Matcher<String> matcher =
         startsWith("Usage: quidem argument... inFile outFile");

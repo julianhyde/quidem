@@ -575,9 +575,11 @@ public class Quidem {
     }
 
     // Print "| FOO | B |"
+    // or    "  FOO | B"
     for (int i = 0; i < n; i++) {
       buf.append(i > 0 ? " | " : mysql ? "| " : " ");
-      buf.append(pad(metaData.getColumnLabel(i + 1), widths[i], false));
+      final String label = metaData.getColumnLabel(i + 1);
+      buf.append(mysql || i < n - 1 ? pad(label, widths[i], false) : label);
     }
     buf.append(mysql ? " |" : "");
     headerLines.add(flush(buf));
