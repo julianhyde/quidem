@@ -976,7 +976,7 @@ public class Quidem {
         boolean abort = false;
         Throwable e = null;
         try {
-          command.execute(execute);
+          command.execute(execute && Quidem.this.execute);
         } catch (RuntimeException e0) {
           e = e0;
         } catch (Exception e0) {

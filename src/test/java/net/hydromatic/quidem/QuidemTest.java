@@ -425,6 +425,29 @@ public class QuidemTest {
                 + "\n");
   }
 
+  @Test public void testSkip() {
+    check(
+        "!use scott\n"
+        + "!skip\n"
+        + "values (1);\n"
+        + "anything\n"
+        + "!ok\n"
+        + "values (1);\n"
+        + "you like\n"
+        + "!error\n"
+        + "\n")
+        .contains(
+            "!use scott\n"
+                + "!skip\n"
+                + "values (1);\n"
+                + "anything\n"
+                + "!ok\n"
+                + "values (1);\n"
+                + "you like\n"
+                + "!error\n"
+                + "\n");
+  }
+
   @Test public void testJustify() {
     check(
         "!use scott\n"
