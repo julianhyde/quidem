@@ -37,25 +37,25 @@ import static org.junit.Assert.assertThat;
 public class QuidemTest {
   @Test public void testBasic() {
     check(
-        "!use foodmart\n"
-        + "select count(*) as c1 from \"foodmart\".\"days\";\n"
+        "!use scott\n"
+        + "select count(*) as c from scott.emp;\n"
         + "!ok\n"
         + "!set outputformat mysql\n"
-        + "select count(*) as c1 from \"foodmart\".\"days\";\n"
+        + "select count(*) as c from scott.emp;\n"
         + "!ok\n"
         + "!plan\n"
         + "\n",
-        "!use foodmart\n"
-        + "select count(*) as c1 from \"foodmart\".\"days\";\n"
-        + "C1\n"
-        + "7\n"
+        "!use scott\n"
+        + "select count(*) as c from scott.emp;\n"
+        + "C\n"
+        + "14\n"
         + "!ok\n"
         + "!set outputformat mysql\n"
-        + "select count(*) as c1 from \"foodmart\".\"days\";\n"
+        + "select count(*) as c from scott.emp;\n"
         + "+----+\n"
-        + "| C1 |\n"
+        + "| C  |\n"
         + "+----+\n"
-        + "|  7 |\n"
+        + "| 14 |\n"
         + "+----+\n"
         + "(1 row)\n"
         + "\n"
@@ -70,10 +70,10 @@ public class QuidemTest {
         + "]\n"
         + "[range variable 1\n"
         + "  join type=INNER\n"
-        + "  table=days\n"
-        + "  cardinality=7\n"
+        + "  table=EMP\n"
+        + "  cardinality=14\n"
         + "  access=FULL SCAN\n"
-        + "  join condition = [index=SYS_IDX_10399\n"
+        + "  join condition = [index=SYS_IDX_10095\n"
         + "  ]\n"
         + "  ]]\n"
         + "PARAMETERS=[]\n"
@@ -84,24 +84,24 @@ public class QuidemTest {
 
   @Test public void testError() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "select blah from blah;\n"
         + "!ok\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
             + "select blah from blah;\n"
             + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH"));
   }
 
   @Test public void testPlan() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "values (1), (2);\n"
         + "!plan\n"
         + "\n",
         matches(
-            "(?s)!use foodmart\n"
+            "(?s)!use scott\n"
                 + "values \\(1\\), \\(2\\);\n"
                 + "isDistinctSelect=.*"
                 + "!plan\n"
@@ -110,13 +110,13 @@ public class QuidemTest {
 
   @Test public void testPlanAfterOk() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "values (1), (2);\n"
         + "!ok\n"
         + "!plan\n"
         + "\n",
         matches(
-            "(?s)!use foodmart\n"
+            "(?s)!use scott\n"
                 + "values \\(1\\), \\(2\\);\n"
                 + "C1\n"
                 + "1\n"
@@ -131,7 +131,7 @@ public class QuidemTest {
    * (Previously there was a "result already open" error.) */
   @Test public void testPlanPlan() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "values (1), (2);\n"
         + "!plan\n"
         + "values (3), (4);\n"
@@ -139,7 +139,7 @@ public class QuidemTest {
         + "!ok\n"
         + "\n",
         matches(
-            "(?s)!use foodmart\n"
+            "(?s)!use scott\n"
             + "values \\(1\\), \\(2\\);\n"
             + "isDistinctSelect=.*\n"
             + "!plan\n"
@@ -156,13 +156,13 @@ public class QuidemTest {
   /** Content inside a '!ok' command, that needs to be matched. */
   @Test public void testOkContent() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "values (1), (2);\n"
         + "baz\n"
         + "!ok\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "values (1), (2);\n"
                 + "C1\n"
                 + "1\n"
@@ -175,7 +175,7 @@ public class QuidemTest {
    * the input string. */
   @Test public void testOkOrderBy() {
     // In (2, 1), out (1, 2). Test gives a diff (correctly).
-    check("!use foodmart\n"
+    check("!use scott\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
         + "C\n"
         + "2\n"
@@ -183,7 +183,7 @@ public class QuidemTest {
         + "!ok\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "select * from (values (1), (2)) as t(c) order by 1;\n"
                 + "C\n"
                 + "1\n"
@@ -191,7 +191,7 @@ public class QuidemTest {
                 + "!ok\n"
                 + "\n"));
     // In (1, 2), out (1, 2). Test passes.
-    check("!use foodmart\n"
+    check("!use scott\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
         + "C\n"
         + "1\n"
@@ -199,7 +199,7 @@ public class QuidemTest {
         + "!ok\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "select * from (values (1), (2)) as t(c) order by 1;\n"
                 + "C\n"
                 + "1\n"
@@ -211,7 +211,7 @@ public class QuidemTest {
   /** As {@link #testOkOrderBy()} but for MySQL. */
   @Test public void testOkOrderByMySQL() {
     // In (2, 1), out (1, 2). Test gives a diff (correctly).
-    check("!use foodmart\n"
+    check("!use scott\n"
         + "!set outputformat mysql\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
         + "+---+\n"
@@ -225,7 +225,7 @@ public class QuidemTest {
         + "!ok\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "!set outputformat mysql\n"
                 + "select * from (values (1), (2)) as t(c) order by 1;\n"
                 + "+---+\n"
@@ -239,7 +239,7 @@ public class QuidemTest {
                 + "!ok\n"
                 + "\n"));
     // In (1, 2), out (1, 2). Test passes.
-    check("!use foodmart\n"
+    check("!use scott\n"
         + "!set outputformat mysql\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
         + "+---+\n"
@@ -253,7 +253,7 @@ public class QuidemTest {
         + "!ok\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "!set outputformat mysql\n"
                 + "select * from (values (1), (2)) as t(c) order by 1;\n"
                 + "+---+\n"
@@ -274,7 +274,7 @@ public class QuidemTest {
     // In (2, 1), out (2, 1). Result would be correct in either order, but
     // we output in the original order, so as not to cause a diff.
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "select * from (values (1), (2)) as t(c);\n"
         + "C\n"
         + "2\n"
@@ -282,7 +282,7 @@ public class QuidemTest {
         + "!ok\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "select * from (values (1), (2)) as t(c);\n"
                 + "C\n"
                 + "2\n"
@@ -291,7 +291,7 @@ public class QuidemTest {
                 + "\n"));
     // In (1, 2), out (1, 2).
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "select * from (values (1), (2)) as t(c);\n"
         + "C\n"
         + "1\n"
@@ -299,7 +299,7 @@ public class QuidemTest {
         + "!ok\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "select * from (values (1), (2)) as t(c);\n"
                 + "C\n"
                 + "1\n"
@@ -311,7 +311,7 @@ public class QuidemTest {
   /** Content inside a '!plan' command, that needs to be matched. */
   @Test public void testPlanContent() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "values (1), (2);\n"
         + "foo\n"
         + "!plan\n"
@@ -319,7 +319,7 @@ public class QuidemTest {
         + "!ok\n"
         + "\n",
         matches(
-            "(?s)!use foodmart\n"
+            "(?s)!use scott\n"
                 + "values \\(1\\), \\(2\\);\n"
                 + "isDistinctSelect=.*\n"
                 + "!plan\n"
@@ -332,7 +332,7 @@ public class QuidemTest {
 
   @Test public void testIfFalse() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "!if (false) {\n"
         + "values (1), (2);\n"
         + "anything\n"
@@ -341,7 +341,7 @@ public class QuidemTest {
         + "!}\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "!if (false) {\n"
                 + "values (1), (2);\n"
                 + "anything\n"
@@ -353,7 +353,7 @@ public class QuidemTest {
 
   @Test public void testIfTrue() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
         + "!if (true) {\n"
         + "values (1), (2);\n"
         + "anything\n"
@@ -362,7 +362,7 @@ public class QuidemTest {
         + "!}\n"
         + "\n",
         containsString(
-            "!use foodmart\n"
+            "!use scott\n"
                 + "!if (true) {\n"
                 + "values (1), (2);\n"
                 + "C1\n"
@@ -375,7 +375,7 @@ public class QuidemTest {
 
   @Test public void testJustify() {
     check(
-        "!use foodmart\n"
+        "!use scott\n"
             + "select true as b00000,\n"
             + "  cast(1 as tinyint) as t000,\n"
             + "  cast(1 as integer) as i000,\n"
@@ -390,7 +390,7 @@ public class QuidemTest {
             + "!set outputformat csv\n"
             + "!ok\n"
             + "\n",
-        containsString("!use foodmart\n"
+        containsString("!use scott\n"
             + "select true as b00000,\n"
             + "  cast(1 as tinyint) as t000,\n"
             + "  cast(1 as integer) as i000,\n"
@@ -434,14 +434,14 @@ public class QuidemTest {
 
   @Test public void testDb() throws Exception {
     final File inFile =
-        writeFile("!use fm\nselect * from \"foodmart\".\"days\";\n!ok\n");
+        writeFile("!use fm\nselect * from scott.dept;\n!ok\n");
     final File outFile = File.createTempFile("outFile", ".iq");
     final Matcher<String> matcher = equalTo("");
-    checkMain(matcher, "--db", "fm", "jdbc:hsqldb:res:foodmart", "FOODMART",
-        "FOODMART", inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    checkMain(matcher, "--db", "fm", "jdbc:hsqldb:res:scott", "SA", "",
+        inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(contents(outFile),
         equalTo(
-            "!use fm\nselect * from \"foodmart\".\"days\";\nday, week_day\n1, Sunday\n2, Monday\n3, Tuesday\n4, Wednesday\n5, Thursday\n6, Friday\n7, Saturday\n!ok\n"));
+            "!use fm\nselect * from scott.dept;\nDEPTNO, DNAME, LOC\n10, ACCOUNTING, NEW YORK\n20, RESEARCH, DALLAS\n30, SALES, CHICAGO\n40, OPERATIONS, BOSTON\n!ok\n"));
     inFile.delete();
     outFile.delete();
   }
@@ -510,6 +510,11 @@ public class QuidemTest {
     run.execute(
         new Quidem.ConnectionFactory() {
           public Connection connect(String name) throws Exception {
+            if (name.equals("scott")) {
+              Class.forName("org.hsqldb.jdbcDriver");
+              return DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA",
+                  "");
+            }
             if (name.equals("foodmart")) {
               Class.forName("org.hsqldb.jdbcDriver");
               return DriverManager.getConnection("jdbc:hsqldb:res:foodmart",
@@ -548,8 +553,7 @@ public class QuidemTest {
   public static class FooFactory implements Quidem.ConnectionFactory {
     @Override public Connection connect(String name) throws Exception {
       if (name.equals("foo")) {
-        return DriverManager.getConnection("jdbc:hsqldb:res:foodmart",
-            "FOODMART", "FOODMART");
+        return DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA", "");
       }
       return null;
     }

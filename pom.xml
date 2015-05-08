@@ -7,8 +7,6 @@
     <version>0.1</version>
   </parent>
 
-  <!-- The basics. -->
-  <groupId>net.hydromatic</groupId>
   <artifactId>quidem</artifactId>
   <version>0.4-SNAPSHOT</version>
   <packaging>jar</packaging>
@@ -120,9 +118,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>pentaho</groupId>
-      <artifactId>mondrian-data-foodmart-hsqldb</artifactId>
-      <version>0.2</version>
+      <groupId>net.hydromatic</groupId>
+      <artifactId>scott-data-hsqldb</artifactId>
+      <version>0.1</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
