@@ -1,3 +1,4 @@
+# Configuration for Travis CI
 language: java
 jdk:
   - oraclejdk8
@@ -6,3 +7,8 @@ jdk:
 branches:
   only:
     - master
+sudo: false
+cache:
+  directories:
+    - $HOME/.m2
+# End .travis.yml
