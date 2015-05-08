@@ -353,6 +353,10 @@ public class Quidem {
             SqlCommand command = previousSqlCommand();
             return new ExplainCommand(lines, command, content);
           }
+          if (line.startsWith("error")) {
+            SqlCommand command = previousSqlCommand();
+            return new ErrorCommand(lines, command, content);
+          }
           if (line.startsWith("skip")) {
             return new SkipCommand(lines);
           }
@@ -661,7 +665,7 @@ public class Quidem {
   /** Command that executes a SQL statement and checks its result. */
   class CheckResultCommand extends SimpleCommand {
     private final SqlCommand sqlCommand;
-    private final ImmutableList<String> output;
+    protected final ImmutableList<String> output;
 
     public CheckResultCommand(List<String> lines, SqlCommand sqlCommand,
         ImmutableList<String> output) {
@@ -747,9 +751,11 @@ public class Quidem {
             printWriter.println(line);
           }
           resultSet.close();
-        } else if (resultSetException != null) {
-          resultSetException.printStackTrace(printWriter);
-        } else {
+        }
+
+        checkResultSet(resultSetException);
+
+        if (resultSet == null && resultSetException == null) {
           throw new AssertionError("neither resultSet nor exception set");
         }
         resultSet = null;
@@ -758,6 +764,51 @@ public class Quidem {
         echo(output);
       }
       echo(lines);
+    }
+
+    protected void checkResultSet(SQLException resultSetException) {
+      if (resultSetException != null) {
+        resultSetException.printStackTrace(printWriter);
+      }
+    }
+  }
+
+  /** Command that executes a SQL statement and checks that it throws a given
+   * error. */
+  class ErrorCommand extends CheckResultCommand {
+    public ErrorCommand(List<String> lines, SqlCommand sqlCommand,
+        ImmutableList<String> output) {
+      super(lines, sqlCommand, output);
+    }
+
+    @Override protected void checkResultSet(SQLException resultSetException) {
+      if (resultSetException == null) {
+        printWriter.println("Expected error, but SQL command did not give one");
+      } else if (!output.isEmpty()
+          && stack(resultSetException).contains(concat(output))) {
+        // They gave an expected error, and the actual error does not match.
+        // Print the actual error. This will cause a diff.
+        for (String line : output) {
+          printWriter.println(line);
+        }
+      } else {
+        super.checkResultSet(resultSetException);
+      }
+    }
+
+    private String stack(Throwable e) {
+      final StringWriter buf = new StringWriter();
+      e.printStackTrace(new PrintWriter(buf));
+      return buf.toString();
+    }
+
+    private String concat(List<String> lines) {
+      final StringBuilder buf = new StringBuilder();
+      for (String line : lines) {
+        buf.append(line.trim());
+        buf.append("\n");
+      }
+      return buf.toString();
     }
   }
 

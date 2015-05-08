@@ -95,6 +95,57 @@ public class QuidemTest {
             + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH");
   }
 
+  @Test public void testExpectError() {
+    check(
+        "!use scott\n"
+            + "select blah from blah;\n"
+            + "user lacks privilege or object not found: BLAH\n"
+            + "!error\n"
+            + "\n")
+        .matches(
+            "(?s)!use scott\n"
+                + "select blah from blah;\n"
+                + "user lacks privilege or object not found: BLAH\n"
+                + "!error\n"
+                + "\n");
+  }
+
+  @Test public void testExpectErrorNoExpected() {
+    check(
+        "!use scott\n"
+            + "select blah from blah;\n"
+            + "!error\n"
+            + "\n")
+        .matches(
+            "(?s)!use scott\n"
+                + "select blah from blah;\n"
+                + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH\n"
+                + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+                + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+                + "\tat org.hsqldb.jdbc.JDBCStatement.fetchResult\\(Unknown Source\\)\n"
+                + ".*"
+                + "!error\n"
+                + "\n");
+  }
+
+  @Test public void testExpectErrorDifferent() {
+    check(
+        "!use scott\n"
+            + "select blah from blah;\n"
+            + "user lacks bizz buzz\n"
+            + "!error\n"
+            + "\n")
+        .matches(
+            "(?s)!use scott\n"
+                + "select blah from blah;\n"
+                + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH\n"
+                + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+                + ".*"
+                + " more\n"
+                + "!error\n"
+                + "\n");
+  }
+
   @Test public void testPlan() {
     check(
         "!use scott\n"
