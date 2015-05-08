@@ -44,42 +44,43 @@ public class QuidemTest {
         + "select count(*) as c from scott.emp;\n"
         + "!ok\n"
         + "!plan\n"
-        + "\n",
-        "!use scott\n"
-        + "select count(*) as c from scott.emp;\n"
-        + "C\n"
-        + "14\n"
-        + "!ok\n"
-        + "!set outputformat mysql\n"
-        + "select count(*) as c from scott.emp;\n"
-        + "+----+\n"
-        + "| C  |\n"
-        + "+----+\n"
-        + "| 14 |\n"
-        + "+----+\n"
-        + "(1 row)\n"
-        + "\n"
-        + "!ok\n"
-        + "isDistinctSelect=[false]\n"
-        + "isGrouped=[false]\n"
-        + "isAggregated=[true]\n"
-        + "columns=[\n"
-        + "  COUNT  arg=[   OpTypes.ASTERISK \n"
-        + " nullable\n"
-        + "\n"
-        + "]\n"
-        + "[range variable 1\n"
-        + "  join type=INNER\n"
-        + "  table=EMP\n"
-        + "  cardinality=14\n"
-        + "  access=FULL SCAN\n"
-        + "  join condition = [index=SYS_IDX_10095\n"
-        + "  ]\n"
-        + "  ]]\n"
-        + "PARAMETERS=[]\n"
-        + "SUBQUERIES[]\n"
-        + "!plan\n"
-        + "\n");
+        + "\n")
+        .outputs(
+            "!use scott\n"
+                + "select count(*) as c from scott.emp;\n"
+                + "C\n"
+                + "14\n"
+                + "!ok\n"
+                + "!set outputformat mysql\n"
+                + "select count(*) as c from scott.emp;\n"
+                + "+----+\n"
+                + "| C  |\n"
+                + "+----+\n"
+                + "| 14 |\n"
+                + "+----+\n"
+                + "(1 row)\n"
+                + "\n"
+                + "!ok\n"
+                + "isDistinctSelect=[false]\n"
+                + "isGrouped=[false]\n"
+                + "isAggregated=[true]\n"
+                + "columns=[\n"
+                + "  COUNT  arg=[   OpTypes.ASTERISK \n"
+                + " nullable\n"
+                + "\n"
+                + "]\n"
+                + "[range variable 1\n"
+                + "  join type=INNER\n"
+                + "  table=EMP\n"
+                + "  cardinality=14\n"
+                + "  access=FULL SCAN\n"
+                + "  join condition = [index=SYS_IDX_10095\n"
+                + "  ]\n"
+                + "  ]]\n"
+                + "PARAMETERS=[]\n"
+                + "SUBQUERIES[]\n"
+                + "!plan\n"
+                + "\n");
   }
 
   @Test public void testError() {
@@ -87,11 +88,11 @@ public class QuidemTest {
         "!use scott\n"
         + "select blah from blah;\n"
         + "!ok\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
             + "select blah from blah;\n"
-            + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH"));
+            + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH");
   }
 
   @Test public void testPlan() {
@@ -99,13 +100,13 @@ public class QuidemTest {
         "!use scott\n"
         + "values (1), (2);\n"
         + "!plan\n"
-        + "\n",
-        matches(
+        + "\n")
+        .matches(
             "(?s)!use scott\n"
                 + "values \\(1\\), \\(2\\);\n"
                 + "isDistinctSelect=.*"
                 + "!plan\n"
-                + "\n"));
+                + "\n");
   }
 
   @Test public void testPlanAfterOk() {
@@ -114,8 +115,8 @@ public class QuidemTest {
         + "values (1), (2);\n"
         + "!ok\n"
         + "!plan\n"
-        + "\n",
-        matches(
+        + "\n")
+        .matches(
             "(?s)!use scott\n"
                 + "values \\(1\\), \\(2\\);\n"
                 + "C1\n"
@@ -124,7 +125,7 @@ public class QuidemTest {
                 + "!ok\n"
                 + "isDistinctSelect=.*"
                 + "!plan\n"
-                + "\n"));
+                + "\n");
   }
 
   /** It is OK to have consecutive '!plan' calls and no '!ok'.
@@ -137,20 +138,20 @@ public class QuidemTest {
         + "values (3), (4);\n"
         + "!plan\n"
         + "!ok\n"
-        + "\n",
-        matches(
+        + "\n")
+        .matches(
             "(?s)!use scott\n"
-            + "values \\(1\\), \\(2\\);\n"
-            + "isDistinctSelect=.*\n"
-            + "!plan\n"
-            + "values \\(3\\), \\(4\\);\n"
-            + "isDistinctSelect=.*\n"
-            + "!plan\n"
-            + "C1\n"
-            + "3\n"
-            + "4\n"
-            + "!ok\n"
-            + "\n"));
+                + "values \\(1\\), \\(2\\);\n"
+                + "isDistinctSelect=.*\n"
+                + "!plan\n"
+                + "values \\(3\\), \\(4\\);\n"
+                + "isDistinctSelect=.*\n"
+                + "!plan\n"
+                + "C1\n"
+                + "3\n"
+                + "4\n"
+                + "!ok\n"
+                + "\n");
   }
 
   /** Content inside a '!ok' command, that needs to be matched. */
@@ -160,15 +161,15 @@ public class QuidemTest {
         + "values (1), (2);\n"
         + "baz\n"
         + "!ok\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "values (1), (2);\n"
                 + "C1\n"
                 + "1\n"
                 + "2\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
   }
 
   /** If the statement contains 'order by', result is not re-ordered to match
@@ -181,15 +182,15 @@ public class QuidemTest {
         + "2\n"
         + "1\n"
         + "!ok\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "select * from (values (1), (2)) as t(c) order by 1;\n"
                 + "C\n"
                 + "1\n"
                 + "2\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
     // In (1, 2), out (1, 2). Test passes.
     check("!use scott\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
@@ -197,15 +198,15 @@ public class QuidemTest {
         + "1\n"
         + "2\n"
         + "!ok\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "select * from (values (1), (2)) as t(c) order by 1;\n"
                 + "C\n"
                 + "1\n"
                 + "2\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
   }
 
   /** As {@link #testOkOrderBy()} but for MySQL. */
@@ -223,8 +224,8 @@ public class QuidemTest {
         + "(2 rows)\n"
         + "\n"
         + "!ok\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "!set outputformat mysql\n"
                 + "select * from (values (1), (2)) as t(c) order by 1;\n"
@@ -237,7 +238,7 @@ public class QuidemTest {
                 + "(2 rows)\n"
                 + "\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
     // In (1, 2), out (1, 2). Test passes.
     check("!use scott\n"
         + "!set outputformat mysql\n"
@@ -251,8 +252,8 @@ public class QuidemTest {
         + "(2 rows)\n"
         + "\n"
         + "!ok\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "!set outputformat mysql\n"
                 + "select * from (values (1), (2)) as t(c) order by 1;\n"
@@ -265,7 +266,7 @@ public class QuidemTest {
                 + "(2 rows)\n"
                 + "\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
   }
 
   /** If the statement does not contain 'order by', result is re-ordered to
@@ -280,15 +281,15 @@ public class QuidemTest {
         + "2\n"
         + "1\n"
         + "!ok\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "select * from (values (1), (2)) as t(c);\n"
                 + "C\n"
                 + "2\n"
                 + "1\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
     // In (1, 2), out (1, 2).
     check(
         "!use scott\n"
@@ -297,15 +298,15 @@ public class QuidemTest {
         + "1\n"
         + "2\n"
         + "!ok\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "select * from (values (1), (2)) as t(c);\n"
                 + "C\n"
                 + "1\n"
                 + "2\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
   }
 
   /** Content inside a '!plan' command, that needs to be matched. */
@@ -317,8 +318,8 @@ public class QuidemTest {
         + "!plan\n"
         + "baz\n"
         + "!ok\n"
-        + "\n",
-        matches(
+        + "\n")
+        .matches(
             "(?s)!use scott\n"
                 + "values \\(1\\), \\(2\\);\n"
                 + "isDistinctSelect=.*\n"
@@ -327,7 +328,7 @@ public class QuidemTest {
                 + "1\n"
                 + "2\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
   }
 
   @Test public void testIfFalse() {
@@ -339,8 +340,8 @@ public class QuidemTest {
         + "you like\n"
         + "!plan\n"
         + "!}\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "!if (false) {\n"
                 + "values (1), (2);\n"
@@ -348,7 +349,7 @@ public class QuidemTest {
                 + "you like\n"
                 + "!plan\n"
                 + "!}\n"
-                + "\n"));
+                + "\n");
   }
 
   @Test public void testIfTrue() {
@@ -360,8 +361,8 @@ public class QuidemTest {
         + "you like\n"
         + "!ok\n"
         + "!}\n"
-        + "\n",
-        containsString(
+        + "\n")
+        .contains(
             "!use scott\n"
                 + "!if (true) {\n"
                 + "values (1), (2);\n"
@@ -370,7 +371,7 @@ public class QuidemTest {
                 + "2\n"
                 + "!ok\n"
                 + "!}\n"
-                + "\n"));
+                + "\n");
   }
 
   @Test public void testJustify() {
@@ -389,8 +390,8 @@ public class QuidemTest {
             + "!ok\n"
             + "!set outputformat csv\n"
             + "!ok\n"
-            + "\n",
-        containsString("!use scott\n"
+            + "\n")
+        .contains("!use scott\n"
             + "select true as b00000,\n"
             + "  cast(1 as tinyint) as t000,\n"
             + "  cast(1 as integer) as i000,\n"
@@ -418,7 +419,7 @@ public class QuidemTest {
             + "B00000, T000, I000, F00000, D00000, V003\n"
             + "TRUE, 1, 1, 1.0E0, 1.0E0, 1\n"
             + "!ok\n"
-            + "\n"));
+            + "\n");
   }
 
   /** Test case for
@@ -431,8 +432,8 @@ public class QuidemTest {
             + "!set outputformat psql\n"
             + "select deptno, deptno > 20 as b from scott.dept order by 1;\n"
             + "!ok\n"
-            + "\n",
-        containsString("!use scott\n"
+            + "\n")
+        .contains("!use scott\n"
                 + "!set outputformat psql\n"
                 + "select deptno, deptno > 20 as b from scott.dept order by 1;\n"
                 + " DEPTNO | B\n"
@@ -444,7 +445,7 @@ public class QuidemTest {
                 + "(4 rows)\n"
                 + "\n"
                 + "!ok\n"
-                + "\n"));
+                + "\n");
   }
 
   @Test public void testUsage() throws Exception {
@@ -454,8 +455,11 @@ public class QuidemTest {
   }
 
   @Test public void testDbBad() throws Exception {
-    checkMain(startsWith("Insufficient arguments for --db"),
-        "--db", "name", "jdbc:url");
+    checkMain(
+        startsWith("Insufficient arguments for --db"),
+        "--db",
+        "name",
+        "jdbc:url");
   }
 
   @Test public void testDb() throws Exception {
@@ -481,13 +485,17 @@ public class QuidemTest {
   }
 
   @Test public void testFactoryBad() throws Exception {
-    checkMain(startsWith("Factory class non.existent.ClassName not found"),
-        "--factory", "non.existent.ClassName");
+    checkMain(
+        startsWith("Factory class non.existent.ClassName not found"),
+        "--factory",
+        "non.existent.ClassName");
   }
 
   @Test public void testFactoryBad2() throws Exception {
-    checkMain(startsWith("Error instantiating factory class java.lang.String"),
-        "--factory", "java.lang.String");
+    checkMain(
+        startsWith("Error instantiating factory class java.lang.String"),
+        "--factory",
+        "java.lang.String");
   }
 
   @Test public void testFactory() throws Exception {
@@ -496,8 +504,8 @@ public class QuidemTest {
     final File outFile = File.createTempFile("outFile", ".iq");
     checkMain(equalTo(""), "--factory", FooFactory.class.getName(),
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
-    assertThat(contents(outFile),
-        equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
+    assertThat(
+        contents(outFile), equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
     inFile.delete();
     outFile.delete();
   }
@@ -509,10 +517,6 @@ public class QuidemTest {
     Quidem.main2(Arrays.asList(args), pw);
     pw.close();
     assertThat(sw.toString(), matcher);
-  }
-
-  static void check(String input, String expected) {
-    check(input, CoreMatchers.equalTo(expected));
   }
 
   static String contents(File file) throws IOException {
@@ -527,6 +531,10 @@ public class QuidemTest {
       sw.write(buf, 0, read);
     }
     return sw.toString();
+  }
+
+  static Fluent check(String input) {
+    return new Fluent(input);
   }
 
   static void check(String input, Matcher<String> matcher) {
@@ -558,10 +566,7 @@ public class QuidemTest {
     return s.replaceAll("\r\n", "\n");
   }
 
-  public static Matcher<String> matches(String pattern) {
-    return new StringMatches(pattern);
-  }
-
+  /** Matcher that applies a regular expression. */
   public static class StringMatches extends SubstringMatcher {
     public StringMatches(String pattern) {
       super(pattern);
@@ -582,6 +587,31 @@ public class QuidemTest {
         return DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA", "");
       }
       return null;
+    }
+  }
+
+  /** Fluent class that contains an input string and allows you to test the
+   * output in various ways. */
+  private static class Fluent {
+    private final String input;
+
+    public Fluent(String input) {
+      this.input = input;
+    }
+
+    public Fluent contains(String string) {
+      check(input, containsString(string));
+      return this;
+    }
+
+    public Fluent outputs(String string) {
+      check(input, equalTo(string));
+      return this;
+    }
+
+    public Fluent matches(String pattern) {
+      check(input, new StringMatches(pattern));
+      return this;
     }
   }
 }
