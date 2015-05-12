@@ -2,12 +2,19 @@
 
 For a full list of releases, see <a href="https://github.com/julianhyde/quidem/releases">github</a>.
 
+## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.5">0.5</a> / 2015-05-15
+
+* [<a href="https://github.com/julianhyde/quidem/issues/6">QUIDEM-6</a>]
+  Be permissive when matching whitespace in error stacks
+* [<a href="https://github.com/julianhyde/quidem/issues/5">QUIDEM-5</a>]
+  Windows line endings
+
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.4">0.4</a> / 2015-05-08
 
 * [<a href="https://github.com/julianhyde/quidem/issues/1">QUIDEM-1</a>]
-  [QUIDEM-1] Add '!error' command
+  Add '!error' command
 * [<a href="https://github.com/julianhyde/quidem/issues/3">QUIDEM-3</a>]
-  [QUIDEM-3] Trailing spaces in psql output format
+  Trailing spaces in psql output format
 * [<a href="https://github.com/julianhyde/quidem/issues/4">QUIDEM-4</a>]
   Use "scott" rather than than "foodmart" as test data set
 * Use net.hydromatic parent POM
