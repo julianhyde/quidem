@@ -803,11 +803,12 @@ public class Quidem {
     }
 
     private String concat(List<String> lines) {
-      final StringBuilder buf = new StringBuilder();
+      final StringWriter buf = new StringWriter();
+      final PrintWriter pw = new PrintWriter(buf);
       for (String line : lines) {
-        buf.append(line.trim());
-        buf.append("\n");
+        pw.println(line.trim());
       }
+      pw.close();
       return buf.toString();
     }
   }

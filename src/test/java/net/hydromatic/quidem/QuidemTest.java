@@ -543,7 +543,7 @@ public class QuidemTest {
     final Matcher<String> matcher = equalTo("");
     checkMain(matcher, "--db", "fm", "jdbc:hsqldb:res:scott", "SA", "",
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
-    assertThat(contents(outFile),
+    assertThat(toLinux(contents(outFile)),
         equalTo(
             "!use fm\nselect * from scott.dept;\nDEPTNO, DNAME, LOC\n10, ACCOUNTING, NEW YORK\n20, RESEARCH, DALLAS\n30, SALES, CHICAGO\n40, OPERATIONS, BOSTON\n!ok\n"));
     inFile.delete();
@@ -578,8 +578,8 @@ public class QuidemTest {
     final File outFile = File.createTempFile("outFile", ".iq");
     checkMain(equalTo(""), "--factory", FooFactory.class.getName(),
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
-    assertThat(
-        contents(outFile), equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
+    assertThat(toLinux(contents(outFile)),
+        equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
     inFile.delete();
     outFile.delete();
   }
