@@ -784,16 +784,21 @@ public class Quidem {
     @Override protected void checkResultSet(SQLException resultSetException) {
       if (resultSetException == null) {
         printWriter.println("Expected error, but SQL command did not give one");
-      } else if (!output.isEmpty()
-          && stack(resultSetException).contains(concat(output))) {
-        // They gave an expected error, and the actual error does not match.
-        // Print the actual error. This will cause a diff.
-        for (String line : output) {
-          printWriter.println(line);
-        }
-      } else {
-        super.checkResultSet(resultSetException);
+        return;
       }
+      if (!output.isEmpty()) {
+        final String actual = squash(stack(resultSetException));
+        final String expected = squash(concat(output));
+        if (actual.contains(expected)) {
+          // They gave an expected error, and the actual error does not match.
+          // Print the actual error. This will cause a diff.
+          for (String line : output) {
+            printWriter.println(line);
+          }
+          return;
+        }
+      }
+      super.checkResultSet(resultSetException);
     }
 
     private String stack(Throwable e) {
@@ -802,13 +807,20 @@ public class Quidem {
       return buf.toString();
     }
 
+    private String squash(String s) {
+      return s.replace("\r\n", "\n") // convert line endings to linux
+          .replaceAll("[ \t]+", " ") // convert tabs & multiple spaces to spaces
+          .replaceAll("\n ", "\n") // remove spaces at start of lines
+          .replaceAll("^ ", "") // or at start of string
+          .replaceAll(" \n", "\n") // remove spaces at end of lines
+          .replaceAll(" $", "\n"); // or at end of string
+    }
+
     private String concat(List<String> lines) {
-      final StringWriter buf = new StringWriter();
-      final PrintWriter pw = new PrintWriter(buf);
+      final StringBuilder buf = new StringBuilder();
       for (String line : lines) {
-        pw.println(line.trim());
+        buf.append(line).append("\n");
       }
-      pw.close();
       return buf.toString();
     }
   }

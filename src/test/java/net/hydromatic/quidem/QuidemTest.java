@@ -128,6 +128,30 @@ public class QuidemTest {
                 + "\n");
   }
 
+  @Test public void testExpectErrorPermissiveTabs() {
+    // Quidem matches even though there are differences in tabs, multiple
+    // spaces, spaces at the start of lines, and different line endings.
+    // Quidem converts line endings to linux.
+    check(
+        "!use scott\n"
+            + "select blah from blah;\n"
+            + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH \n"
+            + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException(Unknown Source)\n"
+            + "  at  org.hsqldb.jdbc.JDBCUtil.sqlException(Unknown Source)\r\n"
+            + "at org.hsqldb.jdbc.JDBCStatement.fetchResult(Unknown Source)  \n"
+            + "!error\n"
+            + "\n")
+        .matches(
+            "(?s)!use scott\n"
+                + "select blah from blah;\n"
+                + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH \n"
+                + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+                + "  at  org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+                + "at org.hsqldb.jdbc.JDBCStatement.fetchResult\\(Unknown Source\\)  \n"
+                + "!error\n"
+                + "\n");
+  }
+
   @Test public void testExpectErrorDifferent() {
     check(
         "!use scott\n"
