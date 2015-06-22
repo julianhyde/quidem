@@ -51,6 +51,9 @@ public class Quidem {
     "           Define a factory class"
   };
 
+  /** Default value for {@link #setStackLimit(int)}. */
+  private static final int DEFAULT_MAX_STACK_LENGTH = 16384;
+
   private BufferedReader reader;
   private Writer writer;
   private PrintWriter printWriter;
@@ -67,6 +70,7 @@ public class Quidem {
   private ConnectionFactory connectionFactory;
   private boolean execute = true;
   private boolean skip = false;
+  private int stackLimit = DEFAULT_MAX_STACK_LENGTH;
 
   public Quidem(BufferedReader reader, Writer writer) {
     this.reader = reader;
@@ -252,6 +256,25 @@ public class Quidem {
         return Quidem.chars(c, end - start);
       }
     };
+  }
+
+  /**
+   * Sets the maximum number of characters of an error stack to be printed.
+   *
+   * <p>If negative, does not limit the stack size.
+   *
+   * <p>The default is {@link #DEFAULT_MAX_STACK_LENGTH}.
+   *
+   * <p>Useful because it prevents {@code diff} from running out of memory if
+   * the error stack is very large. It is preferable to produce a result where
+   * you can see the first N characters of each stack trace than to produce
+   * no result at all.
+   *
+   * @param stackLimit Maximum number of characters to print of each stack
+   *                      trace
+   */
+  public void setStackLimit(int stackLimit) {
+    this.stackLimit = stackLimit;
   }
 
   /** Connection factory that recognizes a single name. */
@@ -615,6 +638,28 @@ public class Quidem {
     return s;
   }
 
+  private String stack(Throwable e) {
+    final StringWriter buf = new StringWriter();
+    stack(e, buf);
+    return buf.toString();
+  }
+
+  private void stack(Throwable e, Writer w) {
+    if (stackLimit >= 0) {
+      w = new LimitWriter(w, stackLimit);
+    }
+    final PrintWriter pw;
+    if (w instanceof PrintWriter) {
+      pw = (PrintWriter) w;
+    } else {
+      pw = new PrintWriter(w);
+    }
+    e.printStackTrace(pw);
+    if (stackLimit >= 0) {
+      ((LimitWriter) w).ellipsis(" (stack truncated)\n");
+    }
+  }
+
   /** Command. */
   interface Command {
     void execute(boolean execute) throws Exception;
@@ -768,7 +813,7 @@ public class Quidem {
 
     protected void checkResultSet(SQLException resultSetException) {
       if (resultSetException != null) {
-        resultSetException.printStackTrace(printWriter);
+        stack(resultSetException, printWriter);
       }
     }
   }
@@ -799,12 +844,6 @@ public class Quidem {
         }
       }
       super.checkResultSet(resultSetException);
-    }
-
-    private String stack(Throwable e) {
-      final StringWriter buf = new StringWriter();
-      e.printStackTrace(new PrintWriter(buf));
-      return buf.toString();
     }
 
     private String squash(String s) {
@@ -1004,7 +1043,7 @@ public class Quidem {
         if (e != null) {
           command.execute(false); // echo the command
           printWriter.println("Error while executing command " + command);
-          e.printStackTrace(printWriter);
+          stack(e, printWriter);
           if (abort) {
             throw (Error) e;
           }

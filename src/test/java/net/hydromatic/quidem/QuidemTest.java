@@ -16,6 +16,9 @@
  */
 package net.hydromatic.quidem;
 
+import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
+
 import org.hamcrest.*;
 import org.hamcrest.core.SubstringMatcher;
 
@@ -26,6 +29,7 @@ import java.io.*;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -90,6 +94,32 @@ public class QuidemTest {
         + "select blah from blah;\n"
         + "!ok\n"
         + "\n")
+        .contains(
+            "!use scott\n"
+            + "select blah from blah;\n"
+            + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH");
+  }
+
+  @Test public void testErrorTruncated() {
+    check(
+        "!use scott\n"
+        + "select blah from blah;\n"
+        + "!ok\n"
+        + "\n")
+        .limit(10)
+        .contains(
+            "!use scott\n"
+            + "select blah from blah;\n"
+            + "java.sql.S (stack truncated)");
+  }
+
+  @Test public void testErrorNotTruncated() {
+    check(
+        "!use scott\n"
+        + "select blah from blah;\n"
+        + "!ok\n"
+        + "\n")
+        .limit(1000)
         .contains(
             "!use scott\n"
             + "select blah from blah;\n"
@@ -486,6 +516,7 @@ public class QuidemTest {
         + "something\n"
         + "!plan\n"
         + "\n",
+        ImmutableList.<Function<Quidem, Quidem>>of(),
         containsString(
             "!use foodmart\n"
                 + "!if (true) {\n"
@@ -634,6 +665,49 @@ public class QuidemTest {
     outFile.delete();
   }
 
+  @Test public void testLimitWriter() throws IOException {
+    final StringWriter w = new StringWriter();
+    LimitWriter limitWriter = new LimitWriter(w, 6);
+    limitWriter.append("abcdefghiklmnopq");
+    assertThat(w.toString(), equalTo("abcdef"));
+
+    // We already exceeded limit. Clearing the backing buffer does not help.
+    w.getBuffer().setLength(0);
+    limitWriter.append("xxxxx");
+    limitWriter.append("yyyyy");
+    assertThat(w.toString(), equalTo(""));
+
+    // Create a new writer to reset the count.
+    limitWriter = new LimitWriter(w, 6);
+    w.getBuffer().setLength(0);
+    limitWriter.append("xxxxx");
+    limitWriter.append("yyyyy");
+    assertThat(w.toString(), equalTo("xxxxxy"));
+
+    limitWriter = new LimitWriter(w, 6);
+    w.getBuffer().setLength(0);
+    limitWriter.append("xxx");
+    limitWriter.append('y');
+    limitWriter.append('y');
+    limitWriter.append('y');
+    limitWriter.append('y');
+    limitWriter.append('y');
+    limitWriter.append('y');
+    limitWriter.append('y');
+    limitWriter.append("");
+    limitWriter.append('z');
+    limitWriter.append("zzzzzzzzz");
+    assertThat(w.toString(), equalTo("xxxyyy"));
+
+    limitWriter = new LimitWriter(w, 6);
+    w.getBuffer().setLength(1);
+    assertThat(w.toString(), equalTo("x"));
+    w.getBuffer().setLength(2);
+    assertThat(w.toString(), equalTo("x\0"));
+    limitWriter.write(new char[]{'a', 'a', 'a', 'a', 'a'}, 0, 3);
+    assertThat(w.toString(), equalTo("x\0aaa"));
+  }
+
   private void checkMain(Matcher<String> matcher, String... args)
       throws Exception {
     final StringWriter sw = new StringWriter();
@@ -661,10 +735,14 @@ public class QuidemTest {
     return new Fluent(input);
   }
 
-  static void check(String input, Matcher<String> matcher) {
+  static void check(String input, List<Function<Quidem, Quidem>> transformList,
+      Matcher<String> matcher) {
     final StringWriter writer = new StringWriter();
-    final Quidem run =
+    Quidem run =
         new Quidem(new BufferedReader(new StringReader(input)), writer);
+    for (Function<Quidem, Quidem> transform : transformList) {
+      run = transform.apply(run);
+    }
     run.execute(
         new Quidem.ConnectionFactory() {
           public Connection connect(String name) throws Exception {
@@ -718,24 +796,45 @@ public class QuidemTest {
    * output in various ways. */
   private static class Fluent {
     private final String input;
+    private final List<Function<Quidem, Quidem>> transformList;
 
     public Fluent(String input) {
+      this(input, ImmutableList.<Function<Quidem, Quidem>>of());
+    }
+
+    public Fluent(String input, List<Function<Quidem, Quidem>> transformList) {
       this.input = input;
+      this.transformList = transformList;
     }
 
     public Fluent contains(String string) {
-      check(input, containsString(string));
+      check(input, transformList, containsString(string));
       return this;
     }
 
+
     public Fluent outputs(String string) {
-      check(input, equalTo(string));
+      check(input, transformList, equalTo(string));
       return this;
     }
 
     public Fluent matches(String pattern) {
-      check(input, new StringMatches(pattern));
+      check(input, transformList, new StringMatches(pattern));
       return this;
+    }
+
+    public Fluent limit(final int i) {
+      final ImmutableList.Builder<Function<Quidem, Quidem>> builder =
+          ImmutableList.builder();
+      builder.addAll(transformList)
+          .add(
+              new Function<Quidem, Quidem>() {
+                public Quidem apply(Quidem quidem) {
+                  quidem.setStackLimit(i);
+                  return quidem;
+                }
+              });
+      return new Fluent(input, builder.build());
     }
   }
 }
