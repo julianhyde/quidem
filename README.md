@@ -181,9 +181,12 @@ the message that you care about.
 
 ### `!if (condition)`
 
-Condition must be `true` or `false`.
+Condition must be `true`, `false`, or a variable name.
 * If `false`, Quidem does not execute commands, but prints their current output.
 * If `true`, Quidem executes commands as normal.
+* If a variable (obtained from the `env` parameter passed to Quidem's
+  constructor), and the variable is boolean true or the string "true",
+  behavior is as `true` above, otherwise as `false` above.
 
 Commands must be enclosed in `{` and terminate with a `!}` line.
 
@@ -198,6 +201,17 @@ select c from t limit 10;
 | Any old text here. It not be ignored |
 | until the query is enabled.          |
 +--------------------------------------+
+!ok
+!}
+
+!if (jdk18) {
+values 'We must be running JDK 1.8.';
++-----------------------------+
+| C                           |
++-----------------------------+
+| We must be running JDK 1.8. |
++-----------------------------+
+(1 rows)
 !ok
 !}
 ```

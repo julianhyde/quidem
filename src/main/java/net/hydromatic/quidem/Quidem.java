@@ -54,6 +54,14 @@ public class Quidem {
   /** Default value for {@link #setStackLimit(int)}. */
   private static final int DEFAULT_MAX_STACK_LENGTH = 16384;
 
+  /** The empty environment. Returns null for all variables. */
+  public static final Function<String, Object> EMPTY_ENV =
+      new Function<String, Object>() {
+        public Object apply(String name) {
+          return null;
+        }
+      };
+
   private BufferedReader reader;
   private Writer writer;
   private PrintWriter printWriter;
@@ -71,11 +79,20 @@ public class Quidem {
   private boolean execute = true;
   private boolean skip = false;
   private int stackLimit = DEFAULT_MAX_STACK_LENGTH;
+  private final Function<String, Object> env;
 
+  /** Creates a Quidem interpreter with an empty environment. */
   public Quidem(BufferedReader reader, Writer writer) {
+    this(reader, writer, EMPTY_ENV);
+  }
+
+  /** Creates a Quidem interpreter. */
+  public Quidem(BufferedReader reader, Writer writer,
+      Function<String, Object> env) {
     this.reader = reader;
     this.writer = writer;
     this.map.put(Property.OUTPUTFORMAT, OutputFormat.CSV);
+    this.env = env;
   }
 
   public static void main(String[] args) {
@@ -277,6 +294,18 @@ public class Quidem {
     this.stackLimit = stackLimit;
   }
 
+  private boolean getBoolean(String variableName) {
+    if (variableName.equals("true")) {
+      return true;
+    }
+    if (variableName.equals("false")) {
+      return false;
+    }
+    final Object value = env.apply(variableName);
+    return value instanceof Boolean && (Boolean) value
+        || value != null && value.toString().equalsIgnoreCase("true");
+  }
+
   /** Connection factory that recognizes a single name. */
   private static class SimpleConnectionFactory implements ConnectionFactory {
     private final String name;
@@ -389,17 +418,14 @@ public class Quidem {
                 OutputFormat.valueOf(parts[2].toUpperCase());
             return new SetCommand(lines, Property.OUTPUTFORMAT, outputFormat);
           }
-          if (line.equals("if (false) {")) {
+          if (line.matches("if \\([A-Za-z-][A-Za-z_0-9]*\\) \\{")) {
             List<String> ifLines = ImmutableList.copyOf(lines);
             lines.clear();
             Command command = new Parser().parse();
-            return new IfCommand(ifLines, lines, command, false);
-          }
-          if (line.equals("if (true) {")) {
-            List<String> ifLines = ImmutableList.copyOf(lines);
-            lines.clear();
-            Command command = new Parser().parse();
-            return new IfCommand(ifLines, lines, command, true);
+            String variable =
+                line.substring("if (" .length(),
+                    line.length() - ") {" .length());
+            return new IfCommand(ifLines, lines, command, variable);
           }
           if (line.equals("}")) {
             return null;
@@ -969,11 +995,11 @@ public class Quidem {
     private final List<String> ifLines;
     private final List<String> endLines;
     private final Command command;
-    private final boolean enable;
+    private final String variable;
 
     public IfCommand(List<String> ifLines, List<String> endLines,
-        Command command, boolean enable) {
-      this.enable = enable;
+        Command command, String variable) {
+      this.variable = variable;
       this.ifLines = ImmutableList.copyOf(ifLines);
       this.endLines = ImmutableList.copyOf(endLines);
       this.command = command;
@@ -989,7 +1015,7 @@ public class Quidem {
         newExecute = oldExecute;
       } else {
         // If "enable" is true, stay in the current mode.
-        newExecute = enable;
+        newExecute = getBoolean(variable);
       }
       command.execute(newExecute);
       echo(endLines);

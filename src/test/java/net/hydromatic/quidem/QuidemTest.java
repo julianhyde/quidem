@@ -480,6 +480,53 @@ public class QuidemTest {
                 + "\n");
   }
 
+  /** Test case for
+   * <a href="https://github.com/julianhyde/quidem/issues/8">[QUIDEM-8]
+   * Allow variable in 'if'</a>. */
+  @Test public void testIfVariable() {
+    check("!use scott\n"
+        + "!if (affirmative) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "!if (negative) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "!if (unset) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "\n")
+        .contains("!use scott\n"
+            + "!if (affirmative) {\n"
+            + "values (1), (2);\n"
+            + "C1\n"
+            + "1\n"
+            + "2\n"
+            + "!ok\n"
+            + "!}\n"
+            + "!if (negative) {\n"
+            + "values (1), (2);\n"
+            + "anything\n"
+            + "you like\n"
+            + "!ok\n"
+            + "!}\n"
+            + "!if (unset) {\n"
+            + "values (1), (2);\n"
+            + "anything\n"
+            + "you like\n"
+            + "!ok\n"
+            + "!}\n"
+            + "\n");
+  }
+
   @Test public void testSkip() {
     check(
         "!use scott\n"
@@ -738,8 +785,15 @@ public class QuidemTest {
   static void check(String input, List<Function<Quidem, Quidem>> transformList,
       Matcher<String> matcher) {
     final StringWriter writer = new StringWriter();
+    final Function<String, Object> env = new Function<String, Object>() {
+      public Object apply(String input) {
+        assert input != null;
+        return input.equals("affirmative") ? Boolean.TRUE
+            : input.equals("negative") ? Boolean.FALSE : null;
+      }
+    };
     Quidem run =
-        new Quidem(new BufferedReader(new StringReader(input)), writer);
+        new Quidem(new BufferedReader(new StringReader(input)), writer, env);
     for (Function<Quidem, Quidem> transform : transformList) {
       run = transform.apply(run);
     }
