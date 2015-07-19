@@ -306,6 +306,36 @@ public class Quidem {
         || value != null && value.toString().equalsIgnoreCase("true");
   }
 
+  /** Returns whether a SQL query is likely to produce results always in the
+   * same order.
+   *
+   * <p>If Quidem believes that the order is deterministic, it does not sort
+   * the rows before comparing them.
+   *
+   * <p>The result is just a guess. Quidem does not understand the finer points
+   * of SQL semantics.
+   *
+   * @param sql SQL query
+   * @return Whether the order is likely to be deterministic
+   */
+  public boolean isProbablyDeterministic(String sql) {
+    final String upperSql = sql.toUpperCase();
+    if (!upperSql.contains("ORDER BY")) {
+      return false;
+    }
+    final int i = upperSql.lastIndexOf("ORDER BY");
+    final String tail = upperSql.substring(i);
+    final int closeCount = tail.length() - tail.replace(")", "").length();
+    final int openCount = tail.length() - tail.replace("(", "").length();
+    if (closeCount > openCount) {
+      // The last ORDER BY occurs within parentheses. It is either in a
+      // sub-query or in a windowed aggregate. Neither of these make the
+      // ordering deterministic.
+      return false;
+    }
+    return true;
+  }
+
   /** Connection factory that recognizes a single name. */
   private static class SimpleConnectionFactory implements ConnectionFactory {
     private final String name;
@@ -765,7 +795,8 @@ public class Quidem {
           resultSet = null;
           resultSetException = null;
           resultSet = statement.executeQuery(sqlCommand.sql);
-          sort = !sqlCommand.sql.toUpperCase().contains("ORDER BY");
+          final String sql = sqlCommand.sql;
+          sort = !isProbablyDeterministic(sql);
         } catch (SQLException e) {
           resultSetException = e;
         }

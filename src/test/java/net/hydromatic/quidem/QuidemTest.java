@@ -37,7 +37,7 @@ import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertThat;
 
 /**
- * Unit test for {@link Quidem}.
+ * Script-based tests for {@link Quidem}.
  */
 public class QuidemTest {
   @Test public void testBasic() {
