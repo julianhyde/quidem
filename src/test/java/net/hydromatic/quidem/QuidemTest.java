@@ -672,8 +672,14 @@ public class QuidemTest {
     checkMain(matcher, "--db", "fm", "jdbc:hsqldb:res:scott", "SA", "",
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(toLinux(contents(outFile)),
-        equalTo(
-            "!use fm\nselect * from scott.dept;\nDEPTNO, DNAME, LOC\n10, ACCOUNTING, NEW YORK\n20, RESEARCH, DALLAS\n30, SALES, CHICAGO\n40, OPERATIONS, BOSTON\n!ok\n"));
+        equalTo("!use fm\n"
+            + "select * from scott.dept;\n"
+            + "DEPTNO, DNAME, LOC\n"
+            + "10, ACCOUNTING, NEW YORK\n"
+            + "20, RESEARCH, DALLAS\n"
+            + "30, SALES, CHICAGO\n"
+            + "40, OPERATIONS, BOSTON\n"
+            + "!ok\n"));
     inFile.delete();
     outFile.delete();
   }
@@ -708,6 +714,37 @@ public class QuidemTest {
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(toLinux(contents(outFile)),
         equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
+    inFile.delete();
+    outFile.delete();
+  }
+
+  @Test public void testVar() throws Exception {
+    final File inFile =
+        writeFile("!if (myVar) {\nblah;\n!ok\n!}\n");
+    final File outFile = File.createTempFile("outFile", ".iq");
+    final Matcher<String> matcher = equalTo("");
+    checkMain(matcher, "--var", "myVar", "true",
+        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThat(toLinux(contents(outFile)),
+        startsWith("!if (myVar) {\n"
+            + "blah;\n"
+            + "!ok\n"
+            + "Error while executing command CheckResultCommand [sql: blah\n"
+            + "]\n"
+            + "java.lang.RuntimeException: no connection\n"));
+    inFile.delete();
+    outFile.delete();
+  }
+
+  @Test public void testVarFalse() throws Exception {
+    final File inFile =
+        writeFile("!if (myVar) {\nblah;\n!ok\n!}\n");
+    final File outFile = File.createTempFile("outFile", ".iq");
+    final Matcher<String> matcher = equalTo("");
+    checkMain(matcher, "--var", "myVar", "false",
+        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThat(toLinux(contents(outFile)),
+        equalTo("!if (myVar) {\nblah;\n!ok\n!}\n"));
     inFile.delete();
     outFile.delete();
   }

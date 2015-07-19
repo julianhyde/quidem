@@ -127,11 +127,20 @@ quidem argument... filename
 
 Arguments
 * `--help` - Display help
+* `--var name value` - Define a variable that can be used in `!if (name)`.
 * `--db dbName jdbcUrl username password` - Define database, so that
   you can execute `!use dbName`.
 * `--factory className` - Define a connection factory. The class must
   implement interface
   `net.hydromatic.quidem.Quidem.ConnectionFactory`.
+
+For example, the following command line runs Quidem script `script.oq`
+with database `hr` defined to connect to MySQL,
+and variable `advanced` set to `true`.
+
+```
+quidem --db hr jdbc:mysql://localhost/hr scott tiger --var advanced true script.oq
+```
 
 ## Script commands
 

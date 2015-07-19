@@ -47,6 +47,8 @@ public class Quidem {
     "           Print usage",
     "  --db name url user password",
     "           Add a database to the connection factory",
+    "  --var name value",
+    "           Assign a value to a variable",
     "  --factory className",
     "           Define a factory class"
   };
@@ -110,6 +112,7 @@ public class Quidem {
   public static void main2(List<String> args, PrintWriter out)
       throws Exception {
     final List<ConnectionFactory> factories = Lists.newArrayList();
+    final Map<String, String> envMap = Maps.newLinkedHashMap();
     int i;
     for (i = 0; i < args.size();) {
       String arg = args.get(i);
@@ -128,6 +131,17 @@ public class Quidem {
         final String password = args.get(i + 4);
         factories.add(new SimpleConnectionFactory(name, url, user, password));
         i += 5;
+        continue;
+      }
+      if (arg.equals("--var")) {
+        if (i + 3 >= args.size()) {
+          usage(out, "Insufficient arguments for --var");
+          return;
+        }
+        final String name = args.get(i + 1);
+        final String value = args.get(i + 2);
+        envMap.put(name, value);
+        i += 3;
         continue;
       }
       if (arg.equals("--factory")) {
@@ -180,7 +194,13 @@ public class Quidem {
       throw new RuntimeException("Error opening output " + outFile, e);
     }
     factories.add(new UnsupportedConnectionFactory());
-    final Quidem quidem = new Quidem(new BufferedReader(reader), writer);
+
+    final Function<String, Object> env = new Function<String, Object>() {
+      public Object apply(String input) {
+        return envMap.get(input);
+      }
+    };
+    final Quidem quidem = new Quidem(new BufferedReader(reader), writer, env);
 
     quidem.execute(new ChainingConnectionFactory(factories));
     reader.close();
