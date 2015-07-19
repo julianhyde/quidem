@@ -4,13 +4,13 @@ For a full list of releases, see <a href="https://github.com/julianhyde/quidem/r
 
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.6">0.6</a> / 2015-07-19
 
-* Add '--var' argument, so you can pass variables from the command line
+* Add `--var` argument, so you can pass variables from the command line
 * [<a href="https://github.com/julianhyde/quidem/issues/7">QUIDEM-7</a>]
   Don't be fooled by ORDER BY inside windowed aggregate
 * [<a href="https://github.com/julianhyde/quidem/issues/8">QUIDEM-8</a>]
-  [QUIDEM-8] Allow variables in 'if'
+  Allow variables in `if`
 * Truncate error stack if it exceeds N characters
-* Add maven central
+* Deploy to maven central
 
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.5">0.5</a> / 2015-05-15
 

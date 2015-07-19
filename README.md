@@ -194,8 +194,10 @@ Condition must be `true`, `false`, or a variable name.
 * If `false`, Quidem does not execute commands, but prints their current output.
 * If `true`, Quidem executes commands as normal.
 * If a variable (obtained from the `env` parameter passed to Quidem's
-  constructor), and the variable is boolean true or the string "true",
+  constructor, from `--var` on the command line),
+  and the variable is boolean true or the string "true",
   behavior is as `true` above, otherwise as `false` above.
+  Unset variables are treated as `false`.
 
 Commands must be enclosed in `{` and terminate with a `!}` line.
 
@@ -323,15 +325,14 @@ Including them within the script would not be portable or maintainable.
 
 ### From Maven
 
-Get Quidem from the
-<a href="http://conjars.org/net.hydromatic/quidem">conjars.org</a>
-maven repository:
+Get Quidem from
+<a href="https://search.maven.org/#search%7Cga%7C1%7Ca%3Aquidem">Maven central</a>:
 
 ```xml
 <dependency>
   <groupId>net.hydromatic</groupId>
   <artifactId>quidem</artifactId>
-  <version>0.1.1</version>
+  <version>0.6</version>
 </dependency>
 ```
 
@@ -351,6 +352,7 @@ $ mvn compile
 * Author: Julian Hyde
 * Blog: http://julianhyde.blogspot.com
 * Project page: http://www.hydromatic.net/quidem
+* API: http://www.hydromatic.net/quidem/apidocs
 * Source code: http://github.com/julianhyde/quidem
 * Developers list:
   <a href="mailto:dev@calcite.incubator.apache.org">dev at calcite.incubator.apache.org</a>
@@ -358,3 +360,4 @@ $ mvn compile
   <a href="mailto:dev-subscribe@calcite.incubator.apache.org">subscribe</a>)
 * Issues: https://github.com/julianhyde/quidem/issues
 * <a href="HISTORY.md">Release notes and history</a>
+* <a href="HOWTO.md">HOWTO</a>
