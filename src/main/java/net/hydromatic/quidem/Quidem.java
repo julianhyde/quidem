@@ -18,11 +18,28 @@ package net.hydromatic.quidem;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 
-import java.io.*;
-import java.sql.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Runs a SQL script.
@@ -39,20 +56,6 @@ public class Quidem {
   public static final boolean DEBUG =
     "true".equals(System.getProperties().getProperty("quidem.debug"));
 
-  private static final String[] USAGE_LINES = {
-    "Usage: quidem argument... inFile outFile",
-    "",
-    "Arguments:",
-    "  --help",
-    "           Print usage",
-    "  --db name url user password",
-    "           Add a database to the connection factory",
-    "  --var name value",
-    "           Assign a value to a variable",
-    "  --factory className",
-    "           Define a factory class"
-  };
-
   /** Default value for {@link #setStackLimit(int)}. */
   private static final int DEFAULT_MAX_STACK_LENGTH = 16384;
 
@@ -64,9 +67,12 @@ public class Quidem {
         }
       };
 
-  private BufferedReader reader;
-  private Writer writer;
-  private PrintWriter printWriter;
+  /** The empty environment. Returns null for all database names. */
+  public static final ConnectionFactory EMPTY_CONNECTION_FACTORY =
+      new ChainingConnectionFactory(ImmutableList.<ConnectionFactory>of());
+
+  private final BufferedReader reader;
+  private final PrintWriter writer;
   private final Map<Property, Object> map = new HashMap<Property, Object>();
   /** Result set from SQL statement just executed. */
   private ResultSet resultSet;
@@ -77,144 +83,51 @@ public class Quidem {
   private String pushedLine;
   private final StringBuilder buf = new StringBuilder();
   private Connection connection;
-  private ConnectionFactory connectionFactory;
+  private final ConnectionFactory connectionFactory;
   private boolean execute = true;
   private boolean skip = false;
   private int stackLimit = DEFAULT_MAX_STACK_LENGTH;
   private final Function<String, Object> env;
 
   /** Creates a Quidem interpreter with an empty environment. */
-  public Quidem(BufferedReader reader, Writer writer) {
-    this(reader, writer, EMPTY_ENV);
+  public Quidem(Reader reader, Writer writer) {
+    this(reader, writer, EMPTY_ENV, EMPTY_CONNECTION_FACTORY);
   }
 
   /** Creates a Quidem interpreter. */
-  public Quidem(BufferedReader reader, Writer writer,
-      Function<String, Object> env) {
-    this.reader = reader;
-    this.writer = writer;
+  public Quidem(Reader reader, Writer writer, Function<String, Object> env,
+      ConnectionFactory connectionFactory) {
+    if (reader instanceof BufferedReader) {
+      this.reader = (BufferedReader) reader;
+    } else {
+      this.reader = new BufferedReader(reader);
+    }
+    if (writer instanceof PrintWriter) {
+      this.writer = (PrintWriter) writer;
+    } else {
+      this.writer = new PrintWriter(writer);
+    }
+    this.connectionFactory = connectionFactory;
     this.map.put(Property.OUTPUTFORMAT, OutputFormat.CSV);
     this.env = env;
   }
 
+  /** Entry point from the operating system command line.
+   *
+   * <p>Calls {@link System#exit(int)} with the following status codes:
+   * <ul>
+   *   <li>0: success</li>
+   *   <li>1: invalid arguments</li>
+   *   <li>2: help</li>
+   * </ul>
+   *
+   * @param args Command-line arguments
+   */
   public static void main(String[] args) {
-    final PrintWriter pw = new PrintWriter(System.out);
-    try {
-      main2(Arrays.asList(args), pw);
-      pw.flush();
-    } catch (Throwable e) {
-      pw.flush();
-      e.printStackTrace();
-      System.exit(1);
-    }
-  }
-
-  public static void main2(List<String> args, PrintWriter out)
-      throws Exception {
-    final List<ConnectionFactory> factories = Lists.newArrayList();
-    final Map<String, String> envMap = Maps.newLinkedHashMap();
-    int i;
-    for (i = 0; i < args.size();) {
-      String arg = args.get(i);
-      if (arg.equals("--help")) {
-        usage(out, null);
-        return;
-      }
-      if (arg.equals("--db")) {
-        if (i + 4 >= args.size()) {
-          usage(out, "Insufficient arguments for --db");
-          return;
-        }
-        final String name = args.get(i + 1);
-        final String url = args.get(i + 2);
-        final String user = args.get(i + 3);
-        final String password = args.get(i + 4);
-        factories.add(new SimpleConnectionFactory(name, url, user, password));
-        i += 5;
-        continue;
-      }
-      if (arg.equals("--var")) {
-        if (i + 3 >= args.size()) {
-          usage(out, "Insufficient arguments for --var");
-          return;
-        }
-        final String name = args.get(i + 1);
-        final String value = args.get(i + 2);
-        envMap.put(name, value);
-        i += 3;
-        continue;
-      }
-      if (arg.equals("--factory")) {
-        if (i + 1 >= args.size()) {
-          usage(out, "Insufficient arguments for --factory");
-        }
-        final String className = args.get(i + 1);
-        final Class<?> factoryClass;
-        try {
-          factoryClass = Class.forName(className);
-        } catch (ClassNotFoundException e) {
-          usage(out, "Factory class " + className + " not found");
-          return;
-        }
-        ConnectionFactory factory;
-        try {
-          factory = (ConnectionFactory) factoryClass.newInstance();
-        } catch (InstantiationException e) {
-          usage(out, "Error instantiating factory class " + className);
-          return;
-        } catch (IllegalAccessException e) {
-          usage(out, "Error instantiating factory class " + className);
-          return;
-        } catch (ClassCastException e) {
-          usage(out, "Error instantiating factory class " + className);
-          return;
-        }
-        factories.add(factory);
-        i += 2;
-        continue;
-      }
-      break;
-    }
-    if (i + 2 > args.size()) {
-      usage(out, "Insufficient arguments: need inFile and outFile");
-      return;
-    }
-    final File inFile = new File(args.get(i));
-    final File outFile = new File(args.get(i + 1));
-    final Reader reader;
-    try {
-      reader = new LineNumberReader(new FileReader(inFile));
-    } catch (FileNotFoundException e) {
-      throw new RuntimeException("Error opening input " + inFile, e);
-    }
-    final Writer writer;
-    try {
-      writer = new FileWriter(outFile);
-    } catch (IOException e) {
-      throw new RuntimeException("Error opening output " + outFile, e);
-    }
-    factories.add(new UnsupportedConnectionFactory());
-
-    final Function<String, Object> env = new Function<String, Object>() {
-      public Object apply(String input) {
-        return envMap.get(input);
-      }
-    };
-    final Quidem quidem = new Quidem(new BufferedReader(reader), writer, env);
-
-    quidem.execute(new ChainingConnectionFactory(factories));
-    reader.close();
-    writer.close();
-  }
-
-  private static void usage(PrintWriter out, String error) {
-    if (error != null) {
-      out.println(error);
-      out.println();
-    }
-    for (String line : USAGE_LINES) {
-      out.println(line);
-    }
+    final PrintWriter out = new PrintWriter(System.out);
+    final PrintWriter err = new PrintWriter(System.err);
+    final int code = Launcher.main2(out, err, Arrays.asList(args));
+    System.exit(code);
   }
 
   private void close() throws SQLException {
@@ -225,9 +138,14 @@ public class Quidem {
     }
   }
 
+  @Deprecated
   public void execute(ConnectionFactory connectionFactory) {
-    this.connectionFactory = connectionFactory;
-    this.printWriter = new PrintWriter(writer);
+    new Quidem(reader, writer, env, connectionFactory).execute();
+  }
+
+  /** Executes the commands from the input, writing to the output,
+   * then closing both input and output. */
+  public void execute() {
     try {
       Command command = new Parser().parse();
       try {
@@ -241,7 +159,12 @@ public class Quidem {
             "Error while executing command " + command, e);
       }
     } finally {
-      printWriter.flush();
+      try {
+        reader.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      writer.close();
       try {
         close();
       } catch (SQLException e) {
@@ -356,57 +279,6 @@ public class Quidem {
     return true;
   }
 
-  /** Connection factory that recognizes a single name. */
-  private static class SimpleConnectionFactory implements ConnectionFactory {
-    private final String name;
-    private final String url;
-    private final String user;
-    private final String password;
-
-    public SimpleConnectionFactory(String name, String url, String user,
-        String password) {
-      this.name = name;
-      this.url = url;
-      this.user = user;
-      this.password = password;
-    }
-
-    @Override public Connection connect(String name) throws Exception {
-      if (name.equals(this.name)) {
-        return DriverManager.getConnection(url, user, password);
-      }
-      return null;
-    }
-  }
-
-  /** Connection factory that says all databases are unknown. */
-  private static class UnsupportedConnectionFactory
-      implements ConnectionFactory {
-    public Connection connect(String name) {
-      throw new RuntimeException("Unknown database: " + name);
-    }
-  }
-
-  /** Connection factory that tries several factories, returning a connection
-   * from the first that is able to connect. */
-  private static class ChainingConnectionFactory implements ConnectionFactory {
-    private final List<ConnectionFactory> factories;
-
-    public ChainingConnectionFactory(List<ConnectionFactory> factories) {
-      this.factories = ImmutableList.copyOf(factories);
-    }
-
-    @Override public Connection connect(String name) throws Exception {
-      for (ConnectionFactory factory : factories) {
-        Connection c = factory.connect(name);
-        if (c != null) {
-          return c;
-        }
-      }
-      return null;
-    }
-  }
-
   /** Parser. */
   private class Parser {
     final List<Command> commands = new ArrayList<Command>();
@@ -473,8 +345,8 @@ public class Quidem {
             lines.clear();
             Command command = new Parser().parse();
             String variable =
-                line.substring("if (" .length(),
-                    line.length() - ") {" .length());
+                line.substring("if (".length(),
+                    line.length() - ") {".length());
             return new IfCommand(ifLines, lines, command, variable);
           }
           if (line.equals("}")) {
@@ -746,7 +618,7 @@ public class Quidem {
     protected Command echo(Iterable<String> lines) {
       for (String line : lines) {
         try {
-          printWriter.println(line);
+          writer.println(line);
         } catch (Exception e) {
           throw new RuntimeException("Error while writing output", e);
         }
@@ -847,30 +719,30 @@ public class Quidem {
 
           // Print the actual header.
           for (String line : headerLines) {
-            printWriter.println(line);
+            writer.println(line);
           }
           // Print all lines that occurred in the actual output ("bodyLines"),
           // but in their original order ("lines").
           for (String line : lines) {
             if (sort) {
               if (bodyLines.remove(line)) {
-                printWriter.println(line);
+                writer.println(line);
               }
             } else {
               if (!bodyLines.isEmpty()
                   && bodyLines.get(0).equals(line)) {
                 bodyLines.remove(0);
-                printWriter.println(line);
+                writer.println(line);
               }
             }
           }
           // Print lines that occurred in the actual output but not original.
           for (String line : bodyLines) {
-            printWriter.println(line);
+            writer.println(line);
           }
           // Print the actual footer.
           for (String line : footerLines) {
-            printWriter.println(line);
+            writer.println(line);
           }
           resultSet.close();
         }
@@ -890,7 +762,7 @@ public class Quidem {
 
     protected void checkResultSet(SQLException resultSetException) {
       if (resultSetException != null) {
-        stack(resultSetException, printWriter);
+        stack(resultSetException, writer);
       }
     }
   }
@@ -905,7 +777,7 @@ public class Quidem {
 
     @Override protected void checkResultSet(SQLException resultSetException) {
       if (resultSetException == null) {
-        printWriter.println("Expected error, but SQL command did not give one");
+        writer.println("Expected error, but SQL command did not give one");
         return;
       }
       if (!output.isEmpty()) {
@@ -915,7 +787,7 @@ public class Quidem {
           // They gave an expected error, and the actual error does not match.
           // Print the actual error. This will cause a diff.
           for (String line : output) {
-            printWriter.println(line);
+            writer.println(line);
           }
           return;
         }
@@ -974,8 +846,8 @@ public class Quidem {
         if (buf.length() == 0) {
           throw new AssertionError("explain returned 0 records");
         }
-        printWriter.print(buf);
-        printWriter.flush();
+        writer.print(buf);
+        writer.flush();
       } else {
         echo(content);
       }
@@ -1001,6 +873,10 @@ public class Quidem {
    * Kind of a directory service.
    * Caller must close the connection. */
   public interface ConnectionFactory {
+    /** Creates a connection to the named database.
+     *
+     * <p>Returns null if the database is not known
+     * (except {@link UnsupportedConnectionFactory}. */
     Connection connect(String name) throws Exception;
   }
 
@@ -1119,8 +995,8 @@ public class Quidem {
         }
         if (e != null) {
           command.execute(false); // echo the command
-          printWriter.println("Error while executing command " + command);
-          stack(e, printWriter);
+          writer.println("Error while executing command " + command);
+          stack(e, writer);
           if (abort) {
             throw (Error) e;
           }

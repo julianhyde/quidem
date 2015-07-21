@@ -19,13 +19,19 @@ package net.hydromatic.quidem;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 
-import org.hamcrest.*;
+import org.hamcrest.Matcher;
 import org.hamcrest.core.SubstringMatcher;
 
 import org.junit.Ignore;
 import org.junit.Test;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.Arrays;
@@ -653,15 +659,12 @@ public class QuidemTest {
   @Test public void testUsage() throws Exception {
     final Matcher<String> matcher =
         startsWith("Usage: quidem argument... inFile outFile");
-    checkMain(matcher, "--help");
+    checkMain(matcher, 0, "--help");
   }
 
   @Test public void testDbBad() throws Exception {
-    checkMain(
-        startsWith("Insufficient arguments for --db"),
-        "--db",
-        "name",
-        "jdbc:url");
+    checkMain(startsWith("Insufficient arguments for --db"), 1,
+        "--db", "name", "jdbc:url");
   }
 
   @Test public void testDb() throws Exception {
@@ -669,7 +672,7 @@ public class QuidemTest {
         writeFile("!use fm\nselect * from scott.dept;\n!ok\n");
     final File outFile = File.createTempFile("outFile", ".iq");
     final Matcher<String> matcher = equalTo("");
-    checkMain(matcher, "--db", "fm", "jdbc:hsqldb:res:scott", "SA", "",
+    checkMain(matcher, 0, "--db", "fm", "jdbc:hsqldb:res:scott", "SA", "",
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(toLinux(contents(outFile)),
         equalTo("!use fm\n"
@@ -693,24 +696,20 @@ public class QuidemTest {
   }
 
   @Test public void testFactoryBad() throws Exception {
-    checkMain(
-        startsWith("Factory class non.existent.ClassName not found"),
-        "--factory",
-        "non.existent.ClassName");
+    checkMain(startsWith("Factory class non.existent.ClassName not found"), 1,
+        "--factory", "non.existent.ClassName");
   }
 
   @Test public void testFactoryBad2() throws Exception {
-    checkMain(
-        startsWith("Error instantiating factory class java.lang.String"),
-        "--factory",
-        "java.lang.String");
+    checkMain(startsWith("Error instantiating factory class java.lang.String"),
+        1, "--factory", "java.lang.String");
   }
 
   @Test public void testFactory() throws Exception {
     final File inFile =
         writeFile("!use foo\nvalues 1;\n!ok\n");
     final File outFile = File.createTempFile("outFile", ".iq");
-    checkMain(equalTo(""), "--factory", FooFactory.class.getName(),
+    checkMain(equalTo(""), 0, "--factory", FooFactory.class.getName(),
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(toLinux(contents(outFile)),
         equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
@@ -723,7 +722,7 @@ public class QuidemTest {
         writeFile("!if (myVar) {\nblah;\n!ok\n!}\n");
     final File outFile = File.createTempFile("outFile", ".iq");
     final Matcher<String> matcher = equalTo("");
-    checkMain(matcher, "--var", "myVar", "true",
+    checkMain(matcher, 0, "--var", "myVar", "true",
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(toLinux(contents(outFile)),
         startsWith("!if (myVar) {\n"
@@ -741,7 +740,7 @@ public class QuidemTest {
         writeFile("!if (myVar) {\nblah;\n!ok\n!}\n");
     final File outFile = File.createTempFile("outFile", ".iq");
     final Matcher<String> matcher = equalTo("");
-    checkMain(matcher, "--var", "myVar", "false",
+    checkMain(matcher, 0, "--var", "myVar", "false",
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(toLinux(contents(outFile)),
         equalTo("!if (myVar) {\nblah;\n!ok\n!}\n"));
@@ -792,13 +791,14 @@ public class QuidemTest {
     assertThat(w.toString(), equalTo("x\0aaa"));
   }
 
-  private void checkMain(Matcher<String> matcher, String... args)
-      throws Exception {
+  private void checkMain(Matcher<String> matcher, int expectedCode,
+      String... args) throws Exception {
     final StringWriter sw = new StringWriter();
     final PrintWriter pw = new PrintWriter(sw);
-    Quidem.main2(Arrays.asList(args), pw);
+    final int code = Launcher.main2(pw, pw, Arrays.asList(args));
     pw.close();
     assertThat(sw.toString(), matcher);
+    assertThat(code, equalTo(expectedCode));
   }
 
   static String contents(File file) throws IOException {
@@ -829,12 +829,7 @@ public class QuidemTest {
             : input.equals("negative") ? Boolean.FALSE : null;
       }
     };
-    Quidem run =
-        new Quidem(new BufferedReader(new StringReader(input)), writer, env);
-    for (Function<Quidem, Quidem> transform : transformList) {
-      run = transform.apply(run);
-    }
-    run.execute(
+    final Quidem.ConnectionFactory connectionFactory =
         new Quidem.ConnectionFactory() {
           public Connection connect(String name) throws Exception {
             if (name.equals("scott")) {
@@ -849,7 +844,13 @@ public class QuidemTest {
             }
             throw new RuntimeException("unknown connection '" + name + "'");
           }
-        });
+        };
+    Quidem run =
+        new Quidem(new StringReader(input), writer, env, connectionFactory);
+    for (Function<Quidem, Quidem> transform : transformList) {
+      run = transform.apply(run);
+    }
+    run.execute();
     writer.flush();
     String out = toLinux(writer.toString());
     assertThat(out, matcher);

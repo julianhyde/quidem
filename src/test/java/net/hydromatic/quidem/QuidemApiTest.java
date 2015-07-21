@@ -18,7 +18,6 @@ package net.hydromatic.quidem;
 
 import org.junit.Test;
 
-import java.io.BufferedReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 
@@ -35,8 +34,7 @@ public class QuidemApiTest {
    * Don't be fooled by ORDER BY inside windowed aggregate</a>. */
   @Test public void testDeterministic() {
     final Quidem run =
-        new Quidem(new BufferedReader(new StringReader("")),
-            new StringWriter(), Quidem.EMPTY_ENV);
+        new Quidem(new StringReader(""), new StringWriter());
     assertThat(run.isProbablyDeterministic("select * from emp"), is(false));
     assertThat(run.isProbablyDeterministic("select * from emp order by deptno"),
         is(true));
