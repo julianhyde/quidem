@@ -91,9 +91,17 @@ public class Quidem {
   private int stackLimit = DEFAULT_MAX_STACK_LENGTH;
   private final Function<String, Object> env;
 
-  /** Creates a Quidem interpreter with an empty environment. */
+  /** Creates a Quidem interpreter with an empty environment and empty
+   * connection factory. */
   public Quidem(Reader reader, Writer writer) {
     this(reader, writer, EMPTY_ENV, EMPTY_CONNECTION_FACTORY);
+  }
+
+  /** Creates a Quidem interpreter with an empty environment. */
+  @Deprecated // to be removed before 0.8
+  public Quidem(Reader reader, Writer writer,
+      Function<String, Object> env) {
+    this(reader, writer, env, EMPTY_CONNECTION_FACTORY);
   }
 
   /** Creates a Quidem interpreter. */
