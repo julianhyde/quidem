@@ -29,6 +29,8 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -330,6 +332,10 @@ public class Quidem {
           if (line.startsWith("plan")) {
             SqlCommand command = previousSqlCommand();
             return new ExplainCommand(lines, command, content);
+          }
+          if (line.startsWith("type")) {
+            SqlCommand command = previousSqlCommand();
+            return new TypeCommand(lines, command, content);
           }
           if (line.startsWith("error")) {
             SqlCommand command = previousSqlCommand();
@@ -906,7 +912,7 @@ public class Quidem {
           final ResultSet resultSet =
               statement.executeQuery("explain plan for " + sqlCommand.sql);
           try {
-            final StringBuffer buf = new StringBuffer();
+            final StringBuilder buf = new StringBuilder();
             while (resultSet.next()) {
               final String line = resultSet.getString(1);
               buf.append(line);
@@ -922,6 +928,65 @@ public class Quidem {
           } finally {
             resultSet.close();
           }
+        } finally {
+          statement.close();
+        }
+      } else {
+        echo(content);
+      }
+      echo(lines);
+    }
+  }
+
+  /** Command that prints the row type for the current query. */
+  class TypeCommand extends SimpleCommand {
+    private final SqlCommand sqlCommand;
+    private final ImmutableList<String> content;
+
+    public TypeCommand(List<String> lines,
+        SqlCommand sqlCommand,
+        ImmutableList<String> content) {
+      super(lines);
+      this.sqlCommand = sqlCommand;
+      this.content = content;
+    }
+
+    @Override public String toString() {
+      return "TypeCommand [sql: " + sqlCommand.sql + "]";
+    }
+
+    public void execute(boolean execute) throws Exception {
+      if (execute) {
+        final PreparedStatement statement =
+            connection.prepareStatement(sqlCommand.sql);
+        try {
+          final ResultSetMetaData metaData = statement.getMetaData();
+          final StringBuilder buf = new StringBuilder();
+          for (int i = 1, n = metaData.getColumnCount(); i <= n; i++) {
+            final String label = metaData.getColumnLabel(i);
+            final String typeName = metaData.getColumnTypeName(i);
+            buf.append(label)
+                .append(' ')
+                .append(typeName);
+            final int precision = metaData.getPrecision(i);
+            if (precision > 0) {
+              buf.append("(")
+                  .append(precision);
+              final int scale = metaData.getScale(i);
+              if (scale > 0) {
+                buf.append(", ")
+                    .append(scale);
+              }
+              buf.append(")");
+            }
+            final int nullable = metaData.isNullable(i);
+            if (nullable == DatabaseMetaData.columnNoNulls) {
+              buf.append(" NOT NULL");
+            }
+            buf.append("\n");
+          }
+          writer.print(buf);
+          writer.flush();
         } finally {
           statement.close();
         }

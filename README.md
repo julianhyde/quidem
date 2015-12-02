@@ -312,6 +312,20 @@ input. The input is still printed.
 The effect is similar to enclosing the remainder of the script in an
 `!if (false) {` ... `!}` block.
 
+### `!type`
+
+Prints the column types of the current SQL statement.
+
+Example:
+
+```sql
+select  empno, deptno, sal from scott.emp;
+EMPNO SMALLINT(16) NOT NULL
+DEPTNO TINYINT(8)
+SAL DECIMAL(7, 2)
+!type
+```
+
 ### `!update`
 
 Executes a DML command (INSERT, UPDATE or DELETE) and prints the

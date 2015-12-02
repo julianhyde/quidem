@@ -701,6 +701,26 @@ public class QuidemTest {
     check(input2).contains(output3);
   }
 
+  /** Tests the '!type' command. */
+  @Test public void testType() {
+    final String input = "!use scott\n"
+        + "select empno, deptno, sal from scott.emp where empno < 7400;\n"
+        + "!ok\n"
+        + "!type\n"
+        + "\n";
+    final String output = "!use scott\n"
+        + "select empno, deptno, sal from scott.emp where empno < 7400;\n"
+        + "EMPNO, DEPTNO, SAL\n"
+        + "7369, 20, 800.00\n"
+        + "!ok\n"
+        + "EMPNO SMALLINT(16) NOT NULL\n"
+        + "DEPTNO TINYINT(8)\n"
+        + "SAL DECIMAL(7, 2)\n"
+        + "!type\n"
+        + "\n";
+    check(input).contains(output);
+  }
+
   @Test public void testUsage() throws Exception {
     final Matcher<String> matcher =
         startsWith("Usage: quidem argument... inFile outFile");
