@@ -291,6 +291,7 @@ Bob,10,M,Jane
 | Bob   |     10 | M      | Jane        |
 +-------+--------+--------+-------------+
 (2 rows)
+
 !ok
 
 !set outputformat psql
@@ -299,6 +300,7 @@ Bob,10,M,Jane
  Jane  |     10 | F      | Jane
  Bob   |     10 | M      | Jane
 (2 rows)
+
 !ok
 ```
 
@@ -309,6 +311,22 @@ input. The input is still printed.
 
 The effect is similar to enclosing the remainder of the script in an
 `!if (false) {` ... `!}` block.
+
+### `!update`
+
+Executes a DML command (INSERT, UPDATE or DELETE) and prints the
+number of rows processed.
+
+Example:
+
+```sql
+update emp
+set sal = sal * 2
+where deptno = 10;
+(2 rows modified)
+
+!update
+```
 
 ### `!use <db>`
 

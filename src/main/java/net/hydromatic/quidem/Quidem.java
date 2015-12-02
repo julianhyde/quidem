@@ -775,13 +775,13 @@ public class Quidem {
     }
   }
 
-  /** Command that executes a SQL update and checks its count. */
+  /** Command that executes a SQL DML command and checks its count. */
   class UpdateCommand extends SimpleCommand {
     private final SqlCommand sqlCommand;
     protected final ImmutableList<String> output;
 
     public UpdateCommand(List<String> lines, SqlCommand sqlCommand,
-                              ImmutableList<String> output) {
+        ImmutableList<String> output) {
       super(lines);
       this.sqlCommand = sqlCommand;
       this.output = output;
@@ -807,8 +807,9 @@ public class Quidem {
           resultSet = null;
           resultSetException = null;
           final int updateCount = statement.executeUpdate(sqlCommand.sql);
-          writer.println("Updated " + updateCount
-                  + ((updateCount == 1) ? " row." : " rows."));
+          writer.println("(" + updateCount
+              + ((updateCount == 1) ? " row" : " rows")
+              + " modified)");
           final String sql = sqlCommand.sql;
           sort = !isProbablyDeterministic(sql);
         } catch (SQLException e) {

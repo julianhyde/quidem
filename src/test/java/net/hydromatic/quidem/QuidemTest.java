@@ -656,19 +656,49 @@ public class QuidemTest {
                 + "\n");
   }
 
-  /** Content inside a '!update' command, that needs to be matched. */
+  /** Tests the '!update' command against INSERT and DELETE statements,
+   * and also checks an intervening '!plan'. */
   @Test public void testUpdate() {
-    check(
-        "!use scott\n"
-            + "insert into scott.dept values (50, 'DEV', 'SAN DIEGO');\n"
-            + "!update\n"
-            + "\n")
-        .contains(
-            "!use scott\n"
-                + "insert into scott.dept values (50, 'DEV', 'SAN DIEGO');\n"
-                + "Updated 1 row.\n\n"
-                + "!update\n"
-                + "\n");
+    final String input = "!use scott\n"
+        + "insert into scott.dept values (50, 'DEV', 'SAN DIEGO');\n"
+        + "!update\n"
+        + "!plan\n"
+        + "\n";
+    final String output = "!use scott\n"
+        + "insert into scott.dept values (50, 'DEV', 'SAN DIEGO');\n"
+        + "(1 row modified)\n"
+        + "\n"
+        + "!update\n"
+        + "INSERT VALUES[\n"
+        + "\n"
+        + "TABLE[DEPT]\n"
+        + "PARAMETERS=[]\n"
+        + "SUBQUERIES[]]\n"
+        + "!plan\n"
+        + "\n";
+    check(input).contains(output);
+
+    // remove the row
+    final String input2 = "!use scott\n"
+        + "delete from scott.dept where deptno = 50;\n"
+        + "!update\n"
+        + "\n";
+    final String output2 = "!use scott\n"
+        + "delete from scott.dept where deptno = 50;\n"
+        + "(1 row modified)\n"
+        + "\n"
+        + "!update\n"
+        + "\n";
+    check(input2).contains(output2);
+
+    // no row to remove
+    final String output3 = "!use scott\n"
+        + "delete from scott.dept where deptno = 50;\n"
+        + "(0 rows modified)\n"
+        + "\n"
+        + "!update\n"
+        + "\n";
+    check(input2).contains(output3);
   }
 
   @Test public void testUsage() throws Exception {
