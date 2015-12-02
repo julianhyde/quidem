@@ -39,9 +39,12 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.StringTokenizer;
 
 /**
  * Runs a SQL script.
@@ -206,6 +209,22 @@ public class Quidem {
     return buf.toString();
   }
 
+  <E> Iterator<String> stringIterator(final Enumeration<E> enumeration) {
+    return new Iterator<String>() {
+      public boolean hasNext() {
+        return enumeration.hasMoreElements();
+      }
+
+      public String next() {
+        return enumeration.nextElement().toString();
+      }
+
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
   private static CharSequence chars(final char c, final int length) {
     return new CharSequence() {
       @Override public String toString() {
@@ -247,16 +266,31 @@ public class Quidem {
     this.stackLimit = stackLimit;
   }
 
-  private boolean getBoolean(String variableName) {
-    if (variableName.equals("true")) {
-      return true;
+  private boolean getBoolean(List<String> names) {
+    if (names.size() == 1) {
+      if (names.get(0).equals("true")) {
+        return true;
+      }
+      if (names.get(0).equals("false")) {
+        return false;
+      }
     }
-    if (variableName.equals("false")) {
-      return false;
+    Function<String, Object> e = env;
+    for (int i = 0; i < names.size(); i++) {
+      String name = names.get(i);
+      final Object value = e.apply(name);
+      if (value instanceof Function) {
+        //noinspection unchecked
+        e = (Function<String, Object>) value;
+      } else if (i == names.size() - 1) {
+        if (value instanceof Boolean) {
+          return (Boolean) value;
+        }
+        return value != null
+            && value.toString().equalsIgnoreCase("true");
+      }
     }
-    final Object value = env.apply(variableName);
-    return value instanceof Boolean && (Boolean) value
-        || value != null && value.toString().equalsIgnoreCase("true");
+    return false;
   }
 
   /** Returns whether a SQL query is likely to produce results always in the
@@ -358,14 +392,17 @@ public class Quidem {
                 OutputFormat.valueOf(parts[2].toUpperCase());
             return new SetCommand(lines, Property.OUTPUTFORMAT, outputFormat);
           }
-          if (line.matches("if \\([A-Za-z-][A-Za-z_0-9]*\\) \\{")) {
+          if (line.matches("if \\([A-Za-z-][A-Za-z_0-9.]*\\) \\{")) {
             List<String> ifLines = ImmutableList.copyOf(lines);
             lines.clear();
             Command command = new Parser().parse();
             String variable =
                 line.substring("if (".length(),
                     line.length() - ") {".length());
-            return new IfCommand(ifLines, lines, command, variable);
+            List<String> variables =
+                ImmutableList.copyOf(
+                    stringIterator(new StringTokenizer(variable, ".")));
+            return new IfCommand(ifLines, lines, command, variables);
           }
           if (line.equals("}")) {
             return null;
@@ -1073,11 +1110,11 @@ public class Quidem {
     private final List<String> ifLines;
     private final List<String> endLines;
     private final Command command;
-    private final String variable;
+    private final List<String> variables;
 
     public IfCommand(List<String> ifLines, List<String> endLines,
-        Command command, String variable) {
-      this.variable = variable;
+        Command command, List<String> variables) {
+      this.variables = ImmutableList.copyOf(variables);
       this.ifLines = ImmutableList.copyOf(ifLines);
       this.endLines = ImmutableList.copyOf(endLines);
       this.command = command;
@@ -1093,7 +1130,7 @@ public class Quidem {
         newExecute = oldExecute;
       } else {
         // If "enable" is true, stay in the current mode.
-        newExecute = getBoolean(variable);
+        newExecute = getBoolean(variables);
       }
       command.execute(newExecute);
       echo(endLines);

@@ -533,6 +533,54 @@ public class QuidemTest {
             + "\n");
   }
 
+  /** Test case for
+   * <a href="https://github.com/julianhyde/quidem/issues/11">[QUIDEM-11]
+   * Nested variables</a>. */
+  @Test public void testIfVariableNested() {
+    final String input = "!use scott\n"
+        + "!if (sun.self.self.hot) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "!if (sun.cold) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "!if (sun.unset.foo.baz) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "\n";
+    final String output = "!use scott\n"
+        + "!if (sun.self.self.hot) {\n"
+        + "values (1), (2);\n"
+        + "C1\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "!}\n"
+        + "!if (sun.cold) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "!if (sun.unset.foo.baz) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "\n";
+    check(input).contains(output);
+  }
+
   @Test public void testSkip() {
     check(
         "!use scott\n"
@@ -891,7 +939,18 @@ public class QuidemTest {
       public Object apply(String input) {
         assert input != null;
         return input.equals("affirmative") ? Boolean.TRUE
-            : input.equals("negative") ? Boolean.FALSE : null;
+            : input.equals("negative") ? Boolean.FALSE
+            : input.equals("sun")
+            ? new Function<String, Object>() {
+              public Object apply(String input) {
+                assert input != null;
+                return input.equals("hot") ? Boolean.TRUE
+                    : input.equals("cold") ? Boolean.FALSE
+                    : input.equals("self") ? this
+                    : null;
+              }
+            }
+            : null;
       }
     };
     final Quidem.ConnectionFactory connectionFactory =

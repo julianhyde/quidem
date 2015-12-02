@@ -227,6 +227,24 @@ values 'We must be running JDK 1.8.';
 !}
 ```
 
+Variable names can consist of multiple parts. For example, you can write
+
+```sql
+!if (calcite.version.isAtLeast1) {
+values 'Hello';
+!ok
+!}
+```
+
+and `calcite.version.isAtLeast1` will evaluate to true if
+`env` has an entry "calcite" of type `Function<String, Object>`,
+which has an entry "version" of type `Function<String, Object>`,
+which has an entry "isAtLeast1" which is either true
+or an object whose `toString()` method returns "true".
+
+A multi-part variable evaluates to false if any of its parts are null,
+or any part before the last is not a `Function<String, Object>`.
+
 ### `!ok`
 
 Executes the current query and prints the formatted output.
