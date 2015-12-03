@@ -2,6 +2,25 @@
 
 For a full list of releases, see <a href="https://github.com/julianhyde/quidem/releases">github</a>.
 
+## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.7">0.7</a> / 2015-12-03
+
+* [<a href="https://github.com/julianhyde/quidem/issues/12">QUIDEM-12</a>]
+  Add `!verify` command that compares output to a reference database
+* [<a href="https://github.com/julianhyde/quidem/issues/11">QUIDEM-11</a>]
+  Nested variables
+* Add deprecated constructor for backwards compatibility
+* [<a href="https://github.com/julianhyde/quidem/issues/9">QUIDEM-9</a>]
+  Add `!type` command that checks query column types
+* Work around
+  [<a href="https://github.com/ktoso/maven-git-commit-id-plugin/issues/63">maven-git-commit-it-plugin#63</a>]
+* [<a href="https://github.com/julianhyde/quidem/issues/10">QUIDEM-10</a>]
+  Add `!update` command that calls `executeUpdate` and checks update count
+  (Mike Hinchey)
+* Close statement after `!ok` and `!plan` commands (Mike Hinchey)
+* Factor command-line parsing into a `Launcher` class
+* Add <a href="HOWTO.md">HOWTO</a>
+* Fix release number and maven location
+
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.6">0.6</a> / 2015-07-19
 
 * Add `--var` argument, so you can pass variables from the command line
