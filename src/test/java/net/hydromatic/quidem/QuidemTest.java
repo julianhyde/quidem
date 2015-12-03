@@ -851,7 +851,9 @@ public class QuidemTest {
             + "30, SALES, CHICAGO\n"
             + "40, OPERATIONS, BOSTON\n"
             + "!ok\n"));
+    //noinspection ResultOfMethodCallIgnored
     inFile.delete();
+    //noinspection ResultOfMethodCallIgnored
     outFile.delete();
   }
 
@@ -881,7 +883,9 @@ public class QuidemTest {
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(toLinux(contents(outFile)),
         equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
+    //noinspection ResultOfMethodCallIgnored
     inFile.delete();
+    //noinspection ResultOfMethodCallIgnored
     outFile.delete();
   }
 
@@ -899,7 +903,9 @@ public class QuidemTest {
             + "Error while executing command OkCommand [sql: blah\n"
             + "]\n"
             + "java.lang.RuntimeException: no connection\n"));
+    //noinspection ResultOfMethodCallIgnored
     inFile.delete();
+    //noinspection ResultOfMethodCallIgnored
     outFile.delete();
   }
 
@@ -912,7 +918,9 @@ public class QuidemTest {
         inFile.getAbsolutePath(), outFile.getAbsolutePath());
     assertThat(toLinux(contents(outFile)),
         equalTo("!if (myVar) {\nblah;\n!ok\n!}\n"));
+    //noinspection ResultOfMethodCallIgnored
     inFile.delete();
+    //noinspection ResultOfMethodCallIgnored
     outFile.delete();
   }
 
@@ -1009,7 +1017,7 @@ public class QuidemTest {
       }
     };
     final Quidem.ConnectionFactory connectionFactory =
-        new Quidem.NewConnectionFactory() {
+        new Quidem.ConnectionFactory() {
           public Connection connect(String name, boolean reference)
               throws Exception {
             if (name.equals("scott")) {
@@ -1038,10 +1046,6 @@ public class QuidemTest {
               return connection;
             }
             throw new RuntimeException("unknown connection '" + name + "'");
-          }
-
-          public Connection connect(String name) throws Exception {
-            return connect(name, false);
           }
         };
     Quidem run =
@@ -1074,16 +1078,12 @@ public class QuidemTest {
     }
   }
 
-  public static class FooFactory implements Quidem.NewConnectionFactory {
+  public static class FooFactory implements Quidem.ConnectionFactory {
     public Connection connect(String name, boolean reference) throws Exception {
       if (name.equals("foo")) {
         return DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA", "");
       }
       return null;
-    }
-
-    public Connection connect(String name) throws Exception {
-      return connect(name, false);
     }
   }
 

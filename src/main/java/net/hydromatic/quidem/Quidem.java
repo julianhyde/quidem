@@ -89,7 +89,7 @@ public class Quidem {
   private final StringBuilder buf = new StringBuilder();
   private Connection connection;
   private Connection refConnection;
-  private final NewConnectionFactory connectionFactory;
+  private final ConnectionFactory connectionFactory;
   private boolean execute = true;
   private boolean skip = false;
   private int stackLimit = DEFAULT_MAX_STACK_LENGTH;
@@ -99,13 +99,6 @@ public class Quidem {
    * connection factory. */
   public Quidem(Reader reader, Writer writer) {
     this(reader, writer, EMPTY_ENV, EMPTY_CONNECTION_FACTORY);
-  }
-
-  /** Creates a Quidem interpreter with an empty environment. */
-  @Deprecated // to be removed before 0.8
-  public Quidem(Reader reader, Writer writer,
-      Function<String, Object> env) {
-    this(reader, writer, env, EMPTY_CONNECTION_FACTORY);
   }
 
   /** Creates a Quidem interpreter. */
@@ -121,7 +114,7 @@ public class Quidem {
     } else {
       this.writer = new PrintWriter(writer);
     }
-    this.connectionFactory = adapt(connectionFactory);
+    this.connectionFactory = connectionFactory;
     this.map.put(Property.OUTPUTFORMAT, OutputFormat.CSV);
     this.env = env;
   }
@@ -155,11 +148,6 @@ public class Quidem {
       refConnection = null;
       c.close();
     }
-  }
-
-  @Deprecated // to be removed before 0.8
-  public void execute(ConnectionFactory connectionFactory) {
-    new Quidem(reader, writer, env, connectionFactory).execute();
   }
 
   /** Executes the commands from the input, writing to the output,
@@ -327,25 +315,6 @@ public class Quidem {
       return false;
     }
     return true;
-  }
-
-  /** Wraps a connection factory as a {@link NewConnectionFactory}, if it is not
-   * already. */
-  private static NewConnectionFactory adapt(
-      final ConnectionFactory connectionFactory) {
-    if (connectionFactory instanceof NewConnectionFactory) {
-      return (NewConnectionFactory) connectionFactory;
-    }
-    return new NewConnectionFactory() {
-      public Connection connect(String name, boolean reference)
-          throws Exception {
-        return reference ? null : connectionFactory.connect(name);
-      }
-
-      public Connection connect(String name) throws Exception {
-        return connectionFactory.connect(name);
-      }
-    };
   }
 
   /** Parser. */
@@ -1181,20 +1150,11 @@ public class Quidem {
   }
 
   /** Creates a connection for a given name.
-   * Kind of a directory service.
-   * Caller must close the connection. */
-  public interface ConnectionFactory {
-    /** Creates a connection to the named database.
-     *
-     * <p>Returns null if the database is not known
-     * (except {@link UnsupportedConnectionFactory}. */
-    Connection connect(String name) throws Exception;
-  }
-
-  /** Extended connection factory.
    *
-   * <p>Will become the regular connection factory before 0.8. */
-  public interface NewConnectionFactory extends ConnectionFactory {
+   * <p>It is kind of a directory service.
+   *
+   * <p>Caller must close the connection. */
+  public interface ConnectionFactory {
     /** Creates a connection to the named database or reference database.
      *
      * <p>Returns null if the database is not known
@@ -1205,6 +1165,10 @@ public class Quidem {
      *                  connection
      */
     Connection connect(String name, boolean reference) throws Exception;
+  }
+
+  @Deprecated // will be removed before 0.9
+  public interface NewConnectionFactory extends ConnectionFactory {
   }
 
   /** Property whose value may be set. */

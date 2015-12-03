@@ -30,9 +30,10 @@ class ChainingConnectionFactory implements Quidem.ConnectionFactory {
     this.factories = ImmutableList.copyOf(factories);
   }
 
-  @Override public Connection connect(String name) throws Exception {
+  @Override public Connection connect(String name, boolean reference)
+      throws Exception {
     for (Quidem.ConnectionFactory factory : factories) {
-      Connection c = factory.connect(name);
+      Connection c = factory.connect(name, reference);
       if (c != null) {
         return c;
       }

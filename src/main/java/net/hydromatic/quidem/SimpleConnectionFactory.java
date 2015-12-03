@@ -19,7 +19,8 @@ package net.hydromatic.quidem;
 import java.sql.Connection;
 import java.sql.DriverManager;
 
-/** Connection factory that recognizes a single name. */
+/** Connection factory that recognizes a single name,
+ * and does not offer a reference connection. */
 class SimpleConnectionFactory implements Quidem.ConnectionFactory {
   private final String name;
   private final String url;
@@ -34,8 +35,9 @@ class SimpleConnectionFactory implements Quidem.ConnectionFactory {
     this.password = password;
   }
 
-  @Override public Connection connect(String name) throws Exception {
-    if (name.equals(this.name)) {
+  @Override public Connection connect(String name, boolean reference)
+      throws Exception {
+    if (!reference && name.equals(this.name)) {
       return DriverManager.getConnection(url, user, password);
     }
     return null;
