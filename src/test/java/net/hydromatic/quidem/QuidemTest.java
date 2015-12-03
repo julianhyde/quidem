@@ -34,6 +34,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
@@ -769,6 +770,60 @@ public class QuidemTest {
     check(input).contains(output);
   }
 
+  /** Tests the '!verify' command. */
+  @Test public void testVerify() {
+    final String input = "!use empty\n"
+        + "select * from INFORMATION_SCHEMA.TABLES;\n"
+        + "!verify\n"
+        + "\n";
+    final String output = "!use empty\n"
+        + "select * from INFORMATION_SCHEMA.TABLES;\n"
+        + "!verify\n"
+        + "\n";
+    check(input).contains(output);
+  }
+
+  /** Tests the '!verify' command where the reference database produces
+   * different output. */
+  @Test public void testVerifyDiff() {
+    // Database "empty" sorts nulls first;
+    // its reference database sorts nulls last.
+    final String input = "!use empty\n"
+        + "select * from (values (1,null),(2,'a')) order by 2;\n"
+        + "!verify\n"
+        + "\n";
+    final String output = "!use empty\n"
+        + "select * from (values (1,null),(2,'a')) order by 2;\n"
+        + "!verify\n"
+        + "Error while executing command VerifyCommand [sql: select * from (values (1,null),(2,'a')) order by 2\n"
+        + "]\n"
+        + "java.lang.IllegalArgumentException: Reference query returned different results.\n"
+        + "expected:\n"
+        + "C1, C2\n"
+        + "2, a\n"
+        + "1, null\n"
+        + "actual:\n"
+        + "C1, C2\n"
+        + "1, null\n"
+        + "2, a\n";
+    check(input).contains(output);
+  }
+
+  /** Tests the '!verify' command with a database that has no reference. */
+  @Test public void testVerifyNoReference() {
+    final String input = "!use scott\n"
+        + "select * from scott.emp;\n"
+        + "!verify\n"
+        + "\n";
+    final String output = "!use scott\n"
+        + "select * from scott.emp;\n"
+        + "!verify\n"
+        + "Error while executing command VerifyCommand [sql: select * from scott.emp\n"
+        + "]\n"
+        + "java.lang.IllegalArgumentException: no reference connection\n";
+    check(input).contains(output);
+  }
+
   @Test public void testUsage() throws Exception {
     final Matcher<String> matcher =
         startsWith("Usage: quidem argument... inFile outFile");
@@ -841,7 +896,7 @@ public class QuidemTest {
         startsWith("!if (myVar) {\n"
             + "blah;\n"
             + "!ok\n"
-            + "Error while executing command CheckResultCommand [sql: blah\n"
+            + "Error while executing command OkCommand [sql: blah\n"
             + "]\n"
             + "java.lang.RuntimeException: no connection\n"));
     inFile.delete();
@@ -954,19 +1009,39 @@ public class QuidemTest {
       }
     };
     final Quidem.ConnectionFactory connectionFactory =
-        new Quidem.ConnectionFactory() {
-          public Connection connect(String name) throws Exception {
+        new Quidem.NewConnectionFactory() {
+          public Connection connect(String name, boolean reference)
+              throws Exception {
             if (name.equals("scott")) {
               Class.forName("org.hsqldb.jdbcDriver");
-              return DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA",
-                  "");
+              final Connection connection =
+                  DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA",
+                      "");
+              if (reference) {
+                return null; // no reference connection available for empty
+              }
+              return connection;
             }
-            if (name.equals("foodmart")) {
+            if (name.startsWith("empty")) {
               Class.forName("org.hsqldb.jdbcDriver");
-              return DriverManager.getConnection("jdbc:hsqldb:res:foodmart",
-                  "FOODMART", "FOODMART");
+              if (reference) {
+                name += "_ref";
+              }
+              final Connection connection =
+                  DriverManager.getConnection("jdbc:hsqldb:mem:" + name, "",
+                      "");
+              if (reference) {
+                final Statement statement = connection.createStatement();
+                statement.executeQuery("SET DATABASE SQL NULLS FIRST FALSE");
+                statement.close();
+              }
+              return connection;
             }
             throw new RuntimeException("unknown connection '" + name + "'");
+          }
+
+          public Connection connect(String name) throws Exception {
+            return connect(name, false);
           }
         };
     Quidem run =
@@ -999,12 +1074,16 @@ public class QuidemTest {
     }
   }
 
-  public static class FooFactory implements Quidem.ConnectionFactory {
-    @Override public Connection connect(String name) throws Exception {
+  public static class FooFactory implements Quidem.NewConnectionFactory {
+    public Connection connect(String name, boolean reference) throws Exception {
       if (name.equals("foo")) {
         return DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA", "");
       }
       return null;
+    }
+
+    public Connection connect(String name) throws Exception {
+      return connect(name, false);
     }
   }
 

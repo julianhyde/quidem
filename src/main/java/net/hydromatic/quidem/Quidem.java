@@ -88,7 +88,8 @@ public class Quidem {
   private String pushedLine;
   private final StringBuilder buf = new StringBuilder();
   private Connection connection;
-  private final ConnectionFactory connectionFactory;
+  private Connection refConnection;
+  private final NewConnectionFactory connectionFactory;
   private boolean execute = true;
   private boolean skip = false;
   private int stackLimit = DEFAULT_MAX_STACK_LENGTH;
@@ -120,7 +121,7 @@ public class Quidem {
     } else {
       this.writer = new PrintWriter(writer);
     }
-    this.connectionFactory = connectionFactory;
+    this.connectionFactory = adapt(connectionFactory);
     this.map.put(Property.OUTPUTFORMAT, OutputFormat.CSV);
     this.env = env;
   }
@@ -149,9 +150,14 @@ public class Quidem {
       connection = null;
       c.close();
     }
+    if (refConnection != null) {
+      Connection c = refConnection;
+      refConnection = null;
+      c.close();
+    }
   }
 
-  @Deprecated
+  @Deprecated // to be removed before 0.8
   public void execute(ConnectionFactory connectionFactory) {
     new Quidem(reader, writer, env, connectionFactory).execute();
   }
@@ -323,6 +329,25 @@ public class Quidem {
     return true;
   }
 
+  /** Wraps a connection factory as a {@link NewConnectionFactory}, if it is not
+   * already. */
+  private static NewConnectionFactory adapt(
+      final ConnectionFactory connectionFactory) {
+    if (connectionFactory instanceof NewConnectionFactory) {
+      return (NewConnectionFactory) connectionFactory;
+    }
+    return new NewConnectionFactory() {
+      public Connection connect(String name, boolean reference)
+          throws Exception {
+        return reference ? null : connectionFactory.connect(name);
+      }
+
+      public Connection connect(String name) throws Exception {
+        return connectionFactory.connect(name);
+      }
+    };
+  }
+
   /** Parser. */
   private class Parser {
     final List<Command> commands = new ArrayList<Command>();
@@ -365,7 +390,13 @@ public class Quidem {
           }
           if (line.startsWith("ok")) {
             SqlCommand command = previousSqlCommand();
-            return new CheckResultCommand(lines, command, content);
+            return new OkCommand(lines, command, content);
+          }
+          if (line.startsWith("verify")) {
+            // "content" may or may not be empty. We ignore it.
+            // This allows people to switch between '!ok' and '!verify'.
+            SqlCommand command = previousSqlCommand();
+            return new VerifyCommand(lines, command);
           }
           if (line.startsWith("update")) {
             SqlCommand command = previousSqlCommand();
@@ -706,25 +737,27 @@ public class Quidem {
       if (connection != null) {
         connection.close();
       }
-      connection = connectionFactory.connect(name);
+      if (refConnection != null) {
+        refConnection.close();
+      }
+      connection = connectionFactory.connect(name, false);
+      refConnection = connectionFactory.connect(name, true);
     }
   }
 
   /** Command that executes a SQL statement and checks its result. */
-  class CheckResultCommand extends SimpleCommand {
-    private final SqlCommand sqlCommand;
-    protected final ImmutableList<String> output;
+  abstract class CheckResultCommand extends SimpleCommand {
+    protected final SqlCommand sqlCommand;
+    protected final boolean output;
 
     public CheckResultCommand(List<String> lines, SqlCommand sqlCommand,
-        ImmutableList<String> output) {
+        boolean output) {
       super(lines);
       this.sqlCommand = sqlCommand;
       this.output = output;
     }
 
-    @Override public String toString() {
-      return "CheckResultCommand [sql: " + sqlCommand.sql + "]";
-    }
+    protected abstract List<String> getOutput() throws Exception;
 
     public void execute(boolean execute) throws Exception {
       if (execute) {
@@ -761,7 +794,14 @@ public class Quidem {
             // Strip the header and footer from the actual output.
             // We assume original and actual header have the same line count.
             // Ditto footers.
-            final List<String> lines = new ArrayList<String>(output);
+            final List<String> expectedLines = getOutput();
+            final List<String> lines = new ArrayList<String>(expectedLines);
+            final List<String> actualLines =
+                ImmutableList.<String>builder()
+                    .addAll(headerLines)
+                    .addAll(bodyLines)
+                    .addAll(footerLines)
+                    .build();
             for (String line : headerLines) {
               if (!lines.isEmpty()) {
                 lines.remove(0);
@@ -775,32 +815,59 @@ public class Quidem {
 
             // Print the actual header.
             for (String line : headerLines) {
-              writer.println(line);
+              if (this.output) {
+                writer.println(line);
+              }
             }
             // Print all lines that occurred in the actual output ("bodyLines"),
             // but in their original order ("lines").
             for (String line : lines) {
               if (sort) {
                 if (bodyLines.remove(line)) {
-                  writer.println(line);
+                  if (this.output) {
+                    writer.println(line);
+                  }
                 }
               } else {
                 if (!bodyLines.isEmpty()
                     && bodyLines.get(0).equals(line)) {
                   bodyLines.remove(0);
-                  writer.println(line);
+                  if (this.output) {
+                    writer.println(line);
+                  }
                 }
               }
             }
             // Print lines that occurred in the actual output but not original.
             for (String line : bodyLines) {
-              writer.println(line);
+              if (this.output) {
+                writer.println(line);
+              }
             }
             // Print the actual footer.
             for (String line : footerLines) {
-              writer.println(line);
+              if (this.output) {
+                writer.println(line);
+              }
             }
             resultSet.close();
+            if (!output) {
+              if (!actualLines.equals(expectedLines)) {
+                final StringWriter buf = new StringWriter();
+                final PrintWriter w = new PrintWriter(buf);
+                w.println("Reference query returned different results.");
+                w.println("expected:");
+                for (String line : expectedLines) {
+                  w.println(line);
+                }
+                w.println("actual:");
+                for (String line : actualLines) {
+                  w.println(line);
+                }
+                w.close();
+                throw new IllegalArgumentException(buf.toString());
+              }
+            }
           }
 
           checkResultSet(resultSetException);
@@ -814,7 +881,9 @@ public class Quidem {
           statement.close();
         }
       } else {
-        echo(output);
+        if (output) {
+          echo(getOutput());
+        }
       }
       echo(lines);
     }
@@ -822,6 +891,61 @@ public class Quidem {
     protected void checkResultSet(SQLException resultSetException) {
       if (resultSetException != null) {
         stack(resultSetException, writer);
+      }
+    }
+  }
+
+  /** Command that executes a SQL statement and checks its result. */
+  class OkCommand extends CheckResultCommand {
+    protected final ImmutableList<String> output;
+
+    public OkCommand(List<String> lines,
+        SqlCommand sqlCommand, ImmutableList<String> output) {
+      super(lines, sqlCommand, true);
+      this.output = output;
+    }
+
+    @Override public String toString() {
+      return "OkCommand [sql: " + sqlCommand.sql + "]";
+    }
+
+    protected List<String> getOutput() {
+      return output;
+    }
+  }
+
+  /** Command that executes a SQL statement and compares the result with a
+   * reference database. */
+  class VerifyCommand extends CheckResultCommand {
+    public VerifyCommand(List<String> lines, SqlCommand sqlCommand) {
+      super(lines, sqlCommand, false);
+    }
+
+    @Override public String toString() {
+      return "VerifyCommand [sql: " + sqlCommand.sql + "]";
+    }
+
+    protected List<String> getOutput() throws Exception {
+      if (refConnection == null) {
+        throw new IllegalArgumentException("no reference connection");
+      }
+      final Statement statement = refConnection.createStatement();
+      final ResultSet resultSet = statement.executeQuery(sqlCommand.sql);
+      try {
+        final OutputFormat format =
+            (OutputFormat) map.get(Property.OUTPUTFORMAT);
+        final List<String> headerLines = new ArrayList<String>();
+        final List<String> bodyLines = new ArrayList<String>();
+        final List<String> footerLines = new ArrayList<String>();
+        format.format(resultSet, headerLines, bodyLines, footerLines,
+            Quidem.this);
+        return ImmutableList.<String>builder()
+            .addAll(headerLines)
+            .addAll(bodyLines)
+            .addAll(footerLines)
+            .build();
+      } catch (SQLException e) {
+        throw new IllegalArgumentException("reference threw", e);
       }
     }
   }
@@ -889,7 +1013,7 @@ public class Quidem {
 
   /** Command that executes a SQL statement and checks that it throws a given
    * error. */
-  class ErrorCommand extends CheckResultCommand {
+  class ErrorCommand extends OkCommand {
     public ErrorCommand(List<String> lines, SqlCommand sqlCommand,
         ImmutableList<String> output) {
       super(lines, sqlCommand, output);
@@ -1065,6 +1189,22 @@ public class Quidem {
      * <p>Returns null if the database is not known
      * (except {@link UnsupportedConnectionFactory}. */
     Connection connect(String name) throws Exception;
+  }
+
+  /** Extended connection factory.
+   *
+   * <p>Will become the regular connection factory before 0.8. */
+  public interface NewConnectionFactory extends ConnectionFactory {
+    /** Creates a connection to the named database or reference database.
+     *
+     * <p>Returns null if the database is not known
+     * (except {@link UnsupportedConnectionFactory}.
+     *
+     * @param name Name of the database
+     * @param reference Whether we require a real connection or a reference
+     *                  connection
+     */
+    Connection connect(String name, boolean reference) throws Exception;
   }
 
   /** Property whose value may be set. */

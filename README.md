@@ -154,7 +154,8 @@ The line must start with a `#`.
 Sets the current query to `<sql statement>` (`SELECT`, `INSERT`, etc.)
 Queries may span multiple lines, and must be terminated with a semi-colon, ';'.
 
-The same query may be used by several `!ok` and `!plan` commands.
+The same query may be used by several `!ok`, `!verify`, `!update`, `!error`,
+`!type` and `!plan` commands.
 
 ### `!error`
 
@@ -238,8 +239,8 @@ values 'Hello';
 
 and `calcite.version.isAtLeast1` will evaluate to true if
 `env` has an entry "calcite" of type `Function<String, Object>`,
-which has an entry "version" of type `Function<String, Object>`,
-which has an entry "isAtLeast1" which is either true
+that has an entry "version" of type `Function<String, Object>`,
+that has an entry "isAtLeast1" that is either true
 or an object whose `toString()` method returns "true".
 
 A multi-part variable evaluates to false if any of its parts are null,
@@ -370,6 +371,25 @@ the script or the next `!use` command.
 Connection details such as URLs, username, password and preferred
 driver are presumably provided within the connection factory.
 Including them within the script would not be portable or maintainable.
+
+### `!verify`
+
+Verifies the output of the current statement by executing the same
+statement on the reference database.
+
+Fails if the current connection has no reference database,
+or if the statement is invalid on the reference database,
+or if the output is different.
+
+Example:
+
+```sql
+select count(*) from scott.emp;
+!verify
+```
+
+The `!verify` command is a nice alternative to the `!ok` command
+because it reduces the chance of human error checking in the wrong result.
 
 ## Get Quidem
 
