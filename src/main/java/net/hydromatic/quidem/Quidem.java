@@ -28,6 +28,7 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -76,9 +77,22 @@ public class Quidem {
   public static final ConnectionFactory EMPTY_CONNECTION_FACTORY =
       new ChainingConnectionFactory(ImmutableList.<ConnectionFactory>of());
 
+  /** A property handler that does nothing. */
+  public static final PropertyHandler EMPTY_PROPERTY_HANDLER =
+      new PropertyHandler() {
+        public void onSet(String propertyName, Object value) {
+        }
+      };
+
   private final BufferedReader reader;
   private final PrintWriter writer;
-  private final Map<Property, Object> map = new HashMap<Property, Object>();
+  /** Holds a stack of values for each property. */
+  private final Map<String, List<Object>> map =
+      new HashMap<String, List<Object>>();
+  private final Reader rawReader;
+  private final Writer rawWriter;
+  private final Function<String, Object> rawEnv;
+  private PropertyHandler propertyHandler;
   /** Result set from SQL statement just executed. */
   private ResultSet resultSet;
   /** Whether to sort result set before printing. */
@@ -104,6 +118,16 @@ public class Quidem {
   /** Creates a Quidem interpreter. */
   public Quidem(Reader reader, Writer writer, Function<String, Object> env,
       ConnectionFactory connectionFactory) {
+    this(reader, writer, env, connectionFactory, EMPTY_PROPERTY_HANDLER);
+  }
+
+  /** Creates a Quidem interpreter. */
+  private Quidem(Reader reader, Writer writer, Function<String, Object> env,
+      ConnectionFactory connectionFactory, PropertyHandler propertyHandler) {
+    this.rawReader = reader;
+    this.rawWriter = writer;
+    this.rawEnv = env;
+    this.propertyHandler = propertyHandler;
     if (reader instanceof BufferedReader) {
       this.reader = (BufferedReader) reader;
     } else {
@@ -115,8 +139,22 @@ public class Quidem {
       this.writer = new PrintWriter(writer);
     }
     this.connectionFactory = connectionFactory;
-    this.map.put(Property.OUTPUTFORMAT, OutputFormat.CSV);
-    this.env = env;
+    final List<Object> list = new ArrayList<Object>();
+    list.add(OutputFormat.CSV);
+    this.map.put(Property.OUTPUTFORMAT.propertyName(), list);
+    this.env = new TopEnv(env);
+  }
+
+  /** Creates an instance that uses a given connection factory. */
+  public Quidem withConnectionFactory(ConnectionFactory connectionFactory) {
+    return new Quidem(rawReader, rawWriter, rawEnv, connectionFactory,
+        propertyHandler);
+  }
+
+  /** Creates an instance that uses a given property handler. */
+  public Quidem withPropertyHandler(PropertyHandler propertyHandler) {
+    return new Quidem(rawReader, rawWriter, rawEnv, connectionFactory,
+        propertyHandler);
   }
 
   /** Entry point from the operating system command line.
@@ -386,12 +424,56 @@ public class Quidem {
           if (line.startsWith("skip")) {
             return new SkipCommand(lines);
           }
-          if (line.startsWith("set outputformat")) {
+          if (line.startsWith("pop")) {
             String[] parts = line.split(" ");
-            final OutputFormat outputFormat =
-                OutputFormat.valueOf(parts[2].toUpperCase());
-            return new SetCommand(lines, Property.OUTPUTFORMAT, outputFormat);
+            String propertyName = parts[1];
+            Property property;
+            if (propertyName.equals("outputformat")) {
+              property = Property.OUTPUTFORMAT;
+            } else {
+              property = Property.OTHER;
+            }
+            return new PopCommand(lines, property, propertyName);
           }
+          if (line.startsWith("set ") || line.startsWith("push ")) {
+            String[] parts = line.split(" ");
+            String propertyName = parts[1];
+            String valueString = parts[2];
+            Object value;
+            Property property;
+            if (propertyName.equals("outputformat")) {
+              property = Property.OUTPUTFORMAT;
+              value = OutputFormat.valueOf(parts[2].toUpperCase());
+            } else {
+              property = Property.OTHER;
+              if (valueString.equals("null")) {
+                value = null;
+              } else if (valueString.equals("true")) {
+                value = Boolean.TRUE;
+              } else if (valueString.equals("false")) {
+                value = Boolean.FALSE;
+              } else if (valueString.matches("-?[0-9]+")) {
+                value = new BigDecimal(valueString);
+              } else {
+                value = valueString;
+              }
+            }
+            return line.startsWith("push ")
+                ? new PushCommand(lines, property, propertyName, value)
+                : new SetCommand(lines, property, propertyName, value);
+          }
+          if (line.startsWith("show ")) {
+            String[] parts = line.split(" ");
+            String propertyName = parts[1];
+            Property property;
+            if (propertyName.equals("outputformat")) {
+              property = Property.OUTPUTFORMAT;
+            } else {
+              property = Property.OTHER;
+            }
+            return new ShowCommand(lines, property, propertyName);
+          }
+
           if (line.matches("if \\([A-Za-z-][A-Za-z_0-9.]*\\) \\{")) {
             List<String> ifLines = ImmutableList.copyOf(lines);
             lines.clear();
@@ -659,6 +741,7 @@ public class Quidem {
     }
     e.printStackTrace(pw);
     if (stackLimit >= 0) {
+      assert w instanceof LimitWriter;
       ((LimitWriter) w).ellipsis(" (stack truncated)\n");
     }
   }
@@ -687,7 +770,7 @@ public class Quidem {
   abstract class SimpleCommand extends AbstractCommand {
     protected final ImmutableList<String> lines;
 
-    public SimpleCommand(List<String> lines) {
+    SimpleCommand(List<String> lines) {
       this.lines = ImmutableList.copyOf(lines);
     }
   }
@@ -696,7 +779,7 @@ public class Quidem {
   class UseCommand extends SimpleCommand {
     private final String name;
 
-    public UseCommand(List<String> lines, String name) {
+    UseCommand(List<String> lines, String name) {
       super(lines);
       this.name = name;
     }
@@ -719,7 +802,7 @@ public class Quidem {
     protected final SqlCommand sqlCommand;
     protected final boolean output;
 
-    public CheckResultCommand(List<String> lines, SqlCommand sqlCommand,
+    CheckResultCommand(List<String> lines, SqlCommand sqlCommand,
         boolean output) {
       super(lines);
       this.sqlCommand = sqlCommand;
@@ -752,7 +835,7 @@ public class Quidem {
           }
           if (resultSet != null) {
             final OutputFormat format =
-                (OutputFormat) map.get(Property.OUTPUTFORMAT);
+                (OutputFormat) env.apply(Property.OUTPUTFORMAT.propertyName());
             final List<String> headerLines = new ArrayList<String>();
             final List<String> bodyLines = new ArrayList<String>();
             final List<String> footerLines = new ArrayList<String>();
@@ -868,7 +951,7 @@ public class Quidem {
   class OkCommand extends CheckResultCommand {
     protected final ImmutableList<String> output;
 
-    public OkCommand(List<String> lines,
+    OkCommand(List<String> lines,
         SqlCommand sqlCommand, ImmutableList<String> output) {
       super(lines, sqlCommand, true);
       this.output = output;
@@ -886,7 +969,7 @@ public class Quidem {
   /** Command that executes a SQL statement and compares the result with a
    * reference database. */
   class VerifyCommand extends CheckResultCommand {
-    public VerifyCommand(List<String> lines, SqlCommand sqlCommand) {
+    VerifyCommand(List<String> lines, SqlCommand sqlCommand) {
       super(lines, sqlCommand, false);
     }
 
@@ -902,7 +985,7 @@ public class Quidem {
       final ResultSet resultSet = statement.executeQuery(sqlCommand.sql);
       try {
         final OutputFormat format =
-            (OutputFormat) map.get(Property.OUTPUTFORMAT);
+            (OutputFormat) env.apply(Property.OUTPUTFORMAT.propertyName());
         final List<String> headerLines = new ArrayList<String>();
         final List<String> bodyLines = new ArrayList<String>();
         final List<String> footerLines = new ArrayList<String>();
@@ -924,7 +1007,7 @@ public class Quidem {
     private final SqlCommand sqlCommand;
     protected final ImmutableList<String> output;
 
-    public UpdateCommand(List<String> lines, SqlCommand sqlCommand,
+    UpdateCommand(List<String> lines, SqlCommand sqlCommand,
         ImmutableList<String> output) {
       super(lines);
       this.sqlCommand = sqlCommand;
@@ -983,7 +1066,7 @@ public class Quidem {
   /** Command that executes a SQL statement and checks that it throws a given
    * error. */
   class ErrorCommand extends OkCommand {
-    public ErrorCommand(List<String> lines, SqlCommand sqlCommand,
+    ErrorCommand(List<String> lines, SqlCommand sqlCommand,
         ImmutableList<String> output) {
       super(lines, sqlCommand, output);
     }
@@ -1031,7 +1114,7 @@ public class Quidem {
     private final SqlCommand sqlCommand;
     private final ImmutableList<String> content;
 
-    public ExplainCommand(List<String> lines,
+    ExplainCommand(List<String> lines,
         SqlCommand sqlCommand,
         ImmutableList<String> content) {
       super(lines);
@@ -1081,7 +1164,7 @@ public class Quidem {
     private final SqlCommand sqlCommand;
     private final ImmutableList<String> content;
 
-    public TypeCommand(List<String> lines,
+    TypeCommand(List<String> lines,
         SqlCommand sqlCommand,
         ImmutableList<String> content) {
       super(lines);
@@ -1173,10 +1256,15 @@ public class Quidem {
 
   /** Property whose value may be set. */
   enum Property {
-    OUTPUTFORMAT
+    OUTPUTFORMAT,
+    OTHER;
+
+    String propertyName() {
+      return name().toLowerCase();
+    }
   }
 
-  /** Command that defines the current SQL statement.
+  /** Command that assigns a value to a property.
    *
    * @see CheckResultCommand
    * @see ExplainCommand
@@ -1184,17 +1272,94 @@ public class Quidem {
    */
   class SetCommand extends SimpleCommand {
     private final Property property;
+    private final String propertyName;
     private final Object value;
 
-    public SetCommand(List<String> lines, Property property, Object value) {
+    SetCommand(List<String> lines, Property property, String propertyName,
+        Object value) {
       super(lines);
-      this.property = property;
+      this.property = Preconditions.checkNotNull(property);
+      this.propertyName = Preconditions.checkNotNull(propertyName);
+      Preconditions.checkArgument(property == Property.OTHER
+          || propertyName.equals(property.propertyName()));
       this.value = value;
+      Preconditions.checkArgument(value == null
+          || value instanceof Boolean
+          || value instanceof BigDecimal
+          || value instanceof String
+          || value instanceof OutputFormat);
     }
 
     public void execute(boolean execute) throws Exception {
       echo(lines);
-      map.put(property, value);
+      List<Object> list = map.get(propertyName);
+      if (list == null) {
+        list = new ArrayList<Object>();
+        map.put(propertyName, list);
+      }
+      if (list.isEmpty() || this instanceof PushCommand) {
+        list.add(value);
+      } else {
+        list.set(list.size() - 1, value);
+      }
+      propertyHandler.onSet(propertyName, value);
+    }
+  }
+
+  /** As {@link SetCommand}, but saves value so that it can be restored using
+   * {@link PopCommand}. */
+  class PushCommand extends SetCommand {
+    PushCommand(List<String> lines, Property property, String propertyName,
+        Object value) {
+      super(lines, property, propertyName, value);
+    }
+  }
+
+  /** As {@link SetCommand}, but saves value so that it can be restored using
+   * {@link PopCommand}. */
+  class PopCommand extends SimpleCommand {
+    private final Property property;
+    private final String propertyName;
+
+    PopCommand(List<String> lines, Property property, String propertyName) {
+      super(lines);
+      this.property = Preconditions.checkNotNull(property);
+      this.propertyName = Preconditions.checkNotNull(propertyName);
+      Preconditions.checkArgument(property == Property.OTHER
+          || propertyName.equals(property.propertyName()));
+    }
+
+    public void execute(boolean execute) throws Exception {
+      echo(lines);
+      List<Object> list = map.get(propertyName);
+      if (list == null || list.isEmpty()) {
+        writer.println("Cannot pop " + propertyName + ": stack is empty");
+      } else {
+        list.remove(list.size() - 1);
+      }
+      final Object newValue = env.apply(propertyName);
+      propertyHandler.onSet(propertyName, newValue);
+    }
+  }
+
+  /** Command that prints the current value of a property. */
+  class ShowCommand extends SimpleCommand {
+    private final Property property;
+    private final String propertyName;
+
+    ShowCommand(List<String> lines, Property property,
+        String propertyName) {
+      super(lines);
+      this.property = Preconditions.checkNotNull(property);
+      this.propertyName = Preconditions.checkNotNull(propertyName);
+      Preconditions.checkArgument(property == Property.OTHER
+          || propertyName.equals(property.propertyName()));
+    }
+
+    public void execute(boolean execute) throws Exception {
+      Object value = env.apply(propertyName);
+      writer.println(propertyName + " " + value);
+      echo(lines);
     }
   }
 
@@ -1295,6 +1460,30 @@ public class Quidem {
         }
       }
     }
+  }
+
+  /** Top of the environment stack. If a property is not defined here (with a
+   * non-empty value stack), we look into the environment provided by the
+   * caller. */
+  private class TopEnv implements Function<String, Object> {
+    private final Function<String, Object> env;
+
+    TopEnv(Function<String, Object> env) {
+      this.env = env;
+    }
+
+    @Override public Object apply(String s) {
+      final List<Object> list = map.get(s);
+      if (list == null || list.isEmpty()) {
+        return env.apply(s);
+      }
+      return list.get(list.size() - 1);
+    }
+  }
+
+  /** Called whenver a property's value is changed. */
+  interface PropertyHandler {
+    void onSet(String propertyName, Object value);
   }
 }
 

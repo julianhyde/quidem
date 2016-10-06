@@ -287,6 +287,28 @@ EnumerableFilterRel(condition=[<=($1, 30)]
 !plan
 ```
 
+### `!push <variable> <value>`
+
+Sets the value of a variable, saving the previous value so that
+it can be restored using `!pop`.
+
+### `!pop <variable>`
+
+Restores the value of a variable to its value before the
+previous `!push` of that variable.
+It is an error if there was no previous `!push`.
+
+### `!set <variable> <value>`
+
+Sets the value of a variable.
+
+The variable name must start with a letter, be followed by letters or
+digits, and is case-sensitive.
+
+The value is a boolean (`true` or `false`),
+an integer,
+or a string (either one word, or a double-quoted string).
+
 ### `!set outputformat <format>`
 
 Sets the output format (see `!ok`).

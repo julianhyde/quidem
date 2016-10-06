@@ -40,6 +40,7 @@ import java.util.List;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertThat;
 
@@ -924,6 +925,174 @@ public class QuidemTest {
     outFile.delete();
   }
 
+  @Test public void testSetBoolean() {
+    final String input = "!use scott\n"
+        + "!show foo\n"
+        + "!set foo true\n"
+        + "!show foo\n"
+        + "!if (foo) {\n"
+        + "values 1;\n"
+        + "!ok;\n"
+        + "!}\n"
+        + "!set foo false\n"
+        + "!if (foo) {\n"
+        + "values 2;\n"
+        + "!ok;\n"
+        + "!}\n"
+        + "!push foo true\n"
+        + "!push foo false\n"
+        + "!push foo true\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n";
+    final String output = "!use scott\n"
+        + "foo null\n"
+        + "!show foo\n"
+        + "!set foo true\n"
+        + "foo true\n"
+        + "!show foo\n"
+        + "!if (foo) {\n"
+        + "values 1;\n"
+        + "C1\n"
+        + "1\n"
+        + "!ok;\n"
+        + "!}\n"
+        + "!set foo false\n"
+        + "!if (foo) {\n"
+        + "values 2;\n"
+        + "!ok;\n"
+        + "!}\n"
+        + "!push foo true\n"
+        + "!push foo false\n"
+        + "!push foo true\n"
+        + "foo true\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo false\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo true\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo false\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo null\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "Cannot pop foo: stack is empty\n"
+        + "foo null\n"
+        + "!show foo\n";
+    check(input).contains(output);
+  }
+
+  @Test public void testSetInteger() {
+    final String input = "!use scott\n"
+        + "!show foo\n"
+        + "!set foo -123\n"
+        + "!show foo\n"
+        + "!push foo 345\n"
+        + "!push bar 0\n"
+        + "!push foo hello\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n";
+    final String output = "!use scott\n"
+        + "foo null\n"
+        + "!show foo\n"
+        + "!set foo -123\n"
+        + "foo -123\n"
+        + "!show foo\n"
+        + "!push foo 345\n"
+        + "!push bar 0\n"
+        + "!push foo hello\n"
+        + "foo hello\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo 345\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo -123\n"
+        + "!show foo\n"
+        + "foo -123\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo null\n"
+        + "!show foo\n";
+    check(input).contains(output);
+  }
+
+  /** Tests that the {@link net.hydromatic.quidem.Quidem.PropertyHandler} is
+   * called whenever there is a set, push or pop. */
+  @Test public void testPropertyHandler() {
+    final String input = "!use scott\n"
+        + "!show foo\n"
+        + "!set foo -123\n"
+        + "!show foo\n"
+        + "!push foo 345\n"
+        + "!push bar 0\n"
+        + "!push foo hello\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "!show foo\n";
+    final String output = "!use scott\n"
+        + "foo null\n"
+        + "!show foo\n"
+        + "!set foo -123\n"
+        + "foo -123\n"
+        + "!show foo\n"
+        + "!push foo 345\n"
+        + "!push bar 0\n"
+        + "!push foo hello\n"
+        + "foo hello\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo 345\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo -123\n"
+        + "!show foo\n"
+        + "foo -123\n"
+        + "!show foo\n"
+        + "!pop foo\n"
+        + "foo null\n"
+        + "!show foo\n";
+    final StringBuilder b = new StringBuilder();
+    final Quidem.PropertyHandler propertyHandler =
+        new Quidem.PropertyHandler() {
+          public void onSet(String propertyName, Object value) {
+            b.append(propertyName).append('=').append(value).append('\n');
+          }
+        };
+    check(input).withPropertyHandler(propertyHandler).contains(output);
+    final String propertyEvents = "foo=-123\n"
+        + "foo=345\n"
+        + "bar=0\n"
+        + "foo=hello\n"
+        + "foo=345\n"
+        + "foo=-123\n"
+        + "foo=null\n";
+    assertThat(b.toString(), is(propertyEvents));
+  }
+
   @Test public void testLimitWriter() throws IOException {
     final StringWriter w = new StringWriter();
     LimitWriter limitWriter = new LimitWriter(w, 6);
@@ -1107,7 +1276,6 @@ public class QuidemTest {
       return this;
     }
 
-
     public Fluent outputs(String string) {
       check(input, transformList, equalTo(string));
       return this;
@@ -1119,17 +1287,29 @@ public class QuidemTest {
     }
 
     public Fluent limit(final int i) {
-      final ImmutableList.Builder<Function<Quidem, Quidem>> builder =
-          ImmutableList.builder();
-      builder.addAll(transformList)
-          .add(
+      return new Fluent(input,
+          plus(transformList,
               new Function<Quidem, Quidem>() {
                 public Quidem apply(Quidem quidem) {
                   quidem.setStackLimit(i);
                   return quidem;
                 }
-              });
-      return new Fluent(input, builder.build());
+              }));
+    }
+
+    private static <E> List<E> plus(List<E> list, E element) {
+      return ImmutableList.<E>builder().addAll(list).add(element).build();
+    }
+
+    public Fluent withPropertyHandler(
+        final Quidem.PropertyHandler propertyHandler) {
+      return new Fluent(input,
+          plus(transformList,
+              new Function<Quidem, Quidem>() {
+                public Quidem apply(Quidem quidem) {
+                  return quidem.withPropertyHandler(propertyHandler);
+                }
+              }));
     }
   }
 }
