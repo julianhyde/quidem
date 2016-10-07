@@ -149,6 +149,21 @@ public class QuidemTest {
                 + "\n");
   }
 
+  /** The error does not even need to be a fully line. */
+  @Test public void testExpectErrorPartialLine() {
+    final String input = "!use scott\n"
+        + "select blah from blah;\n"
+        + "lacks privilege\n"
+        + "!error\n"
+        + "\n";
+    final String expected = "(?s)!use scott\n"
+        + "select blah from blah;\n"
+        + "lacks privilege\n"
+        + "!error\n"
+        + "\n";
+    check(input).matches(expected);
+  }
+
   @Test public void testExpectErrorNoExpected() {
     check(
         "!use scott\n"

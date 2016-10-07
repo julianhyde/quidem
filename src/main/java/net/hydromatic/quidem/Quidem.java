@@ -97,7 +97,7 @@ public class Quidem {
   private ResultSet resultSet;
   /** Whether to sort result set before printing. */
   private boolean sort;
-  private SQLException resultSetException;
+  private Throwable resultSetException;
   private final List<String> lines = new ArrayList<String>();
   private String pushedLine;
   private final StringBuilder buf = new StringBuilder();
@@ -832,6 +832,9 @@ public class Quidem {
             sort = !isProbablyDeterministic(sql);
           } catch (SQLException e) {
             resultSetException = e;
+          } catch (Throwable e) {
+            System.out.println("Warning: JDBC driver threw non-SQLException");
+            resultSetException = e;
           }
           if (resultSet != null) {
             final OutputFormat format =
@@ -940,7 +943,7 @@ public class Quidem {
       echo(lines);
     }
 
-    protected void checkResultSet(SQLException resultSetException) {
+    protected void checkResultSet(Throwable resultSetException) {
       if (resultSetException != null) {
         stack(resultSetException, writer);
       }
@@ -1041,6 +1044,9 @@ public class Quidem {
           sort = !isProbablyDeterministic(sql);
         } catch (SQLException e) {
           resultSetException = e;
+        } catch (Throwable e) {
+          System.out.println("Warning: JDBC driver threw non-SQLException");
+          resultSetException = e;
         } finally {
           statement.close();
         }
@@ -1056,7 +1062,7 @@ public class Quidem {
       echo(lines);
     }
 
-    protected void checkResultSet(SQLException resultSetException) {
+    protected void checkResultSet(Throwable resultSetException) {
       if (resultSetException != null) {
         stack(resultSetException, writer);
       }
@@ -1071,14 +1077,14 @@ public class Quidem {
       super(lines, sqlCommand, output);
     }
 
-    @Override protected void checkResultSet(SQLException resultSetException) {
+    @Override protected void checkResultSet(Throwable resultSetException) {
       if (resultSetException == null) {
         writer.println("Expected error, but SQL command did not give one");
         return;
       }
       if (!output.isEmpty()) {
         final String actual = squash(stack(resultSetException));
-        final String expected = squash(concat(output));
+        final String expected = squash(concat(output, false));
         if (actual.contains(expected)) {
           // They gave an expected error, and the actual error does not match.
           // Print the actual error. This will cause a diff.
@@ -1100,10 +1106,13 @@ public class Quidem {
           .replaceAll(" $", "\n"); // or at end of string
     }
 
-    private String concat(List<String> lines) {
+    private String concat(List<String> lines, boolean trailing) {
       final StringBuilder buf = new StringBuilder();
       for (String line : lines) {
         buf.append(line).append("\n");
+      }
+      if (!trailing && buf.length() > 0) {
+        buf.setLength(buf.length() - 1);
       }
       return buf.toString();
     }
@@ -1481,8 +1490,8 @@ public class Quidem {
     }
   }
 
-  /** Called whenver a property's value is changed. */
-  interface PropertyHandler {
+  /** Called whenever a property's value is changed. */
+  public interface PropertyHandler {
     void onSet(String propertyName, Object value);
   }
 }
