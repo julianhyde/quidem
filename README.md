@@ -424,7 +424,7 @@ Get Quidem from
 <dependency>
   <groupId>net.hydromatic</groupId>
   <artifactId>quidem</artifactId>
-  <version>0.7</version>
+  <version>0.8</version>
 </dependency>
 ```
 

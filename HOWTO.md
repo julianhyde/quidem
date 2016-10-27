@@ -8,8 +8,9 @@ Make sure that `mvn clean install site` runs on JDK 1.6, 1.7, 1.8,
 on Linux and Windows.
 Also check [Travis CI](https://travis-ci.org/julianhyde/quidem).
 
-Update the [release history](HISTORY.md) and the version number at the
-bottom of [README](README.md).
+Update the [release history](HISTORY.md),
+the version number at the bottom of [README](README.md),
+and the copyright date in [NOTICE](NOTICE).
 
 ```
 mvn clean

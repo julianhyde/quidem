@@ -2,6 +2,15 @@
 
 For a full list of releases, see <a href="https://github.com/julianhyde/quidem/releases">github</a>.
 
+## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.8">0.8</a> / 2016-10-27
+
+* Catch exceptions that are not `SQLException` (drivers are not supposed
+  to throw them, but sometimes do)
+* [<a href="https://github.com/julianhyde/quidem/issues/14">QUIDEM-14</a>]
+  User-defined properties, and `!set`, `!push`, `!pop` and `!show`
+  commands
+* Remove deprecated APIs; deprecate `NewConnectionFactory`
+
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.7">0.7</a> / 2015-12-03
 
 * [<a href="https://github.com/julianhyde/quidem/issues/12">QUIDEM-12</a>]
