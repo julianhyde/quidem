@@ -1,6 +1,7 @@
 # Configuration for Travis CI
 language: java
 jdk:
+  - oraclejdk9
   - oraclejdk8
   - oraclejdk7
   - openjdk6
@@ -9,7 +10,10 @@ branches:
     - master
 script:
   mvn -Dsurefire.useFile=false test site
-sudo: false
+# Revert the following 3 lines after oraclejdk9 is production in Travis
+sudo: required
+dist: trusty
+before_install: export MAVEN_SKIP_RC="true"
 cache:
   directories:
     - $HOME/.m2

@@ -109,14 +109,14 @@ without introducing any differences. Other changes, such as adding
 SQL statements, tend to require only local changes to that part of the file,
 and therefore Quidem scripts are friendly to patches, merges and parallel development.
 
-For more examples, look at the `.oq` files in the
+For more examples, look at the `.iq` files in the
 <a href="https://github.com/apache/calcite/tree/master/core/src/test/resources/sql">Apache Calcite</a>
 project.
 
 ## Run
 
 ```bash
-$ java net.hydromatic.quidem.Quidem --db hr jdbc:mysql://localhost/hr scott tiger script.oq
+$ java net.hydromatic.quidem.Quidem --db hr jdbc:mysql://localhost/hr scott tiger script.iq
 ```
 
 Synopsis
@@ -430,7 +430,7 @@ Get Quidem from
 
 ### Download and build
 
-You need Java (1.6 or higher; 1.8 preferred), git and maven (3.2.1 or higher).
+You need Java (1.6 or higher; 1.9 preferred), git and maven (3.2.1 or higher).
 
 ```bash
 $ git clone git://github.com/julianhyde/quidem.git
