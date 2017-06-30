@@ -10,10 +10,16 @@ branches:
     - master
 script:
   mvn -Dsurefire.useFile=false test site
-# Revert the following 3 lines after oraclejdk9 is production in Travis
+
+# Revert the following 3 lines after oraclejdk9 is production in Travis.
 sudo: required
 dist: trusty
 before_install: export MAVEN_SKIP_RC="true"
+
+# Need to keep using trusty to get oraclejdk9, but need following line
+# to avoid deprecation warnings about trusty.
+group: deprecated-2017Q2
+
 cache:
   directories:
     - $HOME/.m2
