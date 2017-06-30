@@ -84,6 +84,10 @@ public class Quidem {
         }
       };
 
+  /** The default value of FEEDBACK in SQL*Plus (the minimum number of rows to
+   * print "n rows selected.") is 6. */
+  private static final int ORACLE_FEEDBACK = 6;
+
   private final BufferedReader reader;
   private final PrintWriter writer;
   /** Holds a stack of values for each property. */
@@ -593,6 +597,46 @@ public class Quidem {
       }
     },
 
+    /**
+     * Example 1 (0 rows):
+     *
+     * <blockquote><pre>
+     * no rows selected
+     * </pre></blockquote>
+     *
+     * <p>Example 2 (fewer than 6 rows):
+     *
+     * <blockquote><pre>
+     *   ename deptno gender first_value
+     *   ----- ------ ------ -----------
+     *   Jane      10 F      Jane
+     *   Bob       10 M      Jane
+     * </pre></blockquote>
+     *
+     * <p>Example 3 (6 or more rows):
+     *
+     * <blockquote><pre>
+     *   ename deptno gender first_value
+     *   ----- ------ ------ -----------
+     *   Jane      10 F      Jane
+     *   Bob       10 M      Jane
+     *   Alpha     10 M      Jane
+     *   Charlie   10 F      Jane
+     *   Delta     10 M      Jane
+     *   Echo      10 F      Jane
+     * &nbsp;
+     *   7 rows selected.
+     * </pre></blockquote>
+     */
+    ORACLE {
+      @Override public void format(ResultSet resultSet,
+          List<String> headerLines, List<String> bodyLines,
+          List<String> footerLines, Quidem run) throws Exception {
+        Quidem.format(
+            resultSet, headerLines, bodyLines, footerLines, run.sort, this);
+      }
+    },
+
     // Example:
     //
     //  ename | deptno | gender | first_value
@@ -605,7 +649,7 @@ public class Quidem {
           List<String> headerLines, List<String> bodyLines,
           List<String> footerLines, Quidem run) throws Exception {
         Quidem.format(
-            resultSet, headerLines, bodyLines, footerLines, run.sort, false);
+            resultSet, headerLines, bodyLines, footerLines, run.sort, this);
       }
     },
 
@@ -623,7 +667,7 @@ public class Quidem {
           List<String> headerLines, List<String> bodyLines,
           List<String> footerLines, Quidem run) throws Exception {
         Quidem.format(
-            resultSet, headerLines, bodyLines, footerLines, run.sort, true);
+            resultSet, headerLines, bodyLines, footerLines, run.sort, this);
       }
     };
 
@@ -634,7 +678,8 @@ public class Quidem {
 
   private static void format(ResultSet resultSet, List<String> headerLines,
       List<String> bodyLines, List<String> footerLines, boolean sort,
-      boolean mysql) throws SQLException {
+      OutputFormat format) throws SQLException {
+    final boolean mysql = format == OutputFormat.MYSQL;
     final ResultSetMetaData metaData = resultSet.getMetaData();
     final int n = metaData.getColumnCount();
     final int[] widths = new int[n];
@@ -672,47 +717,115 @@ public class Quidem {
       Collections.sort(rows, ORDERING);
     }
 
-    // Compute "+-----+---+" (if b)
-    // or       "-----+---" (if not b)
+    switch (format) {
+    case ORACLE:
+      if (rows.isEmpty()) {
+        footerLines.add("");
+        footerLines.add("no rows selected");
+        footerLines.add("");
+        return;
+      }
+    }
+
+    // Compute "+-----+---+" (if mysql)
+    // or       "-----+---" (if postgres)
+    // or       "---- -" (if oracle)
     final StringBuilder buf = new StringBuilder();
     for (int i = 0; i < n; i++) {
-      buf.append(mysql || i > 0 ? "+" : "");
-      buf.append(chars('-', widths[i] + 2));
+      switch (format) {
+      case ORACLE:
+        buf.append(i > 0 ? " " : "");
+        buf.append(chars('-', widths[i]));
+        break;
+      default:
+        buf.append(format == OutputFormat.MYSQL || i > 0 ? "+" : "");
+        buf.append(chars('-', widths[i] + 2));
+      }
     }
     buf.append(mysql ? "+" : "");
     String hyphens = flush(buf);
 
-    if (mysql) {
+    switch (format) {
+    case MYSQL:
       headerLines.add(hyphens);
+      break;
     }
 
-    // Print "| FOO | B |"
-    // or    "  FOO | B"
+    // Print "| FOO | B |" (mysql)
+    // or    "  FOO | B" (postgres)
+    // or    "  FOO B" (oracle)
     for (int i = 0; i < n; i++) {
-      buf.append(i > 0 ? " | " : mysql ? "| " : " ");
       final String label = metaData.getColumnLabel(i + 1);
-      buf.append(mysql || i < n - 1 ? pad(label, widths[i], false) : label);
+      switch (format) {
+      case ORACLE:
+        buf.append(i > 0 ? " " : "");
+        buf.append(i < n - 1 ? pad(label, widths[i], false) : label);
+        break;
+      case MYSQL:
+        buf.append(i > 0 ? " | " : "| ");
+        buf.append(pad(label, widths[i], false));
+        break;
+      case PSQL:
+      default:
+        buf.append(i > 0 ? " | " : " ");
+        buf.append(i < n - 1 ? pad(label, widths[i], false) : label);
+        break;
+      }
     }
     buf.append(mysql ? " |" : "");
     headerLines.add(flush(buf));
     headerLines.add(hyphens);
     for (String[] row : rows) {
-      for (int i = 0; i < n; i++) {
-        buf.append(i > 0 ? " | " : mysql ? "| " : " ");
-        // don't pad the last field if it is left-justified
-        final String s = !mysql && i == n - 1 && !rights[i]
-            ? row[i]
-            : pad(row[i], widths[i], rights[i]);
-        buf.append(s);
+      switch (format) {
+      case MYSQL:
+        for (int i = 0; i < n; i++) {
+          buf.append(i > 0 ? " | " : "| ")
+              .append(pad(row[i], widths[i], rights[i]));
+        }
+        buf.append(" |");
+        break;
+
+      case ORACLE:
+        for (int i = 0; i < n; i++) {
+          buf.append(i > 0 ? " " : "");
+          // don't pad the last field if it is left-justified
+          final String s = i == n - 1 && !rights[i]
+              ? row[i]
+              : pad(row[i], widths[i], rights[i]);
+          buf.append(s);
+        }
+        break;
+
+      case PSQL:
+      default:
+        for (int i = 0; i < n; i++) {
+          buf.append(i > 0 ? " | " : " ");
+          // don't pad the last field if it is left-justified
+          final String s = i == n - 1 && !rights[i]
+              ? row[i]
+              : pad(row[i], widths[i], rights[i]);
+          buf.append(s);
+        }
+        break;
       }
-      buf.append(mysql ? " |" : "");
       bodyLines.add(flush(buf));
     }
-    if (mysql) {
+    switch (format) {
+    case MYSQL:
       footerLines.add(hyphens);
+      // fall through
+
+    case PSQL:
+      footerLines.add(
+          rows.size() == 1 ? "(1 row)" : "(" + rows.size() + " rows)");
+      break;
+
+    case ORACLE:
+      if (rows.size() >= ORACLE_FEEDBACK) {
+        footerLines.add("");
+        footerLines.add(rows.size() + " rows selected.");
+      }
     }
-    footerLines.add(
-        rows.size() == 1 ? "(1 row)" : "(" + rows.size() + " rows)");
     footerLines.add("");
   }
 
