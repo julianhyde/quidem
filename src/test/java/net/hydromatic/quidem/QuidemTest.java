@@ -755,6 +755,55 @@ public class QuidemTest {
     check(input).contains(output);
   }
 
+  @Test public void testTrimTrailingSpacesOracle() {
+    final String input = "!use scott\n"
+        + "!set outputformat oracle\n"
+        + "select empno, deptno, comm from scott.emp where empno < 7700;\n"
+        + "!ok\n"
+        + "\n";
+    final String output = "!use scott\n"
+        + "!set outputformat oracle\n"
+        + "select empno, deptno, comm from scott.emp where empno < 7700;\n"
+        + "EMPNO DEPTNO COMM\n"
+        + "----- ------ -------\n"
+        + " 7369     20\n"
+        + " 7499     30  300.00\n"
+        + " 7521     30  500.00\n"
+        + " 7566     20\n"
+        + " 7654     30 1400.00\n"
+        + " 7698     30\n"
+        + "\n"
+        + "6 rows selected.\n"
+        + "\n"
+        + "!ok\n"
+        + "\n";
+    check(input).contains(output);
+  }
+
+  @Test public void testTrimTrailingSpacesPsql() {
+    final String input = "!use scott\n"
+        + "!set outputformat psql\n"
+        + "select empno, deptno, comm from scott.emp where empno < 7700;\n"
+        + "!ok\n"
+        + "\n";
+    final String output = "!use scott\n"
+        + "!set outputformat psql\n"
+        + "select empno, deptno, comm from scott.emp where empno < 7700;\n"
+        + " EMPNO | DEPTNO | COMM\n"
+        + "-------+--------+---------\n"
+        + "  7369 |     20 |\n"
+        + "  7499 |     30 |  300.00\n"
+        + "  7521 |     30 |  500.00\n"
+        + "  7566 |     20 |\n"
+        + "  7654 |     30 | 1400.00\n"
+        + "  7698 |     30 |\n"
+        + "(6 rows)\n"
+        + "\n"
+        + "!ok\n"
+        + "\n";
+    check(input).contains(output);
+  }
+
   /** Test case for
    * <a href="https://github.com/julianhyde/quidem/issues/3">[QUIDEM-3]
    * Trailing spaces in psql output format</a>. */

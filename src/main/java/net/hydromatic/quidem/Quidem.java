@@ -794,6 +794,11 @@ public class Quidem {
               : pad(row[i], widths[i], rights[i]);
           buf.append(s);
         }
+        // Trim trailing spaces
+        while (buf.length() > 0
+            && buf.substring(buf.length() - 1).equals(" ")) {
+          buf.setLength(buf.length() - 1);
+        }
         break;
 
       case PSQL:
@@ -805,6 +810,11 @@ public class Quidem {
               ? row[i]
               : pad(row[i], widths[i], rights[i]);
           buf.append(s);
+        }
+        // Trim trailing spaces
+        while (buf.length() > 0
+               && buf.substring(buf.length() - 1).equals(" ")) {
+          buf.setLength(buf.length() - 1);
         }
         break;
       }
