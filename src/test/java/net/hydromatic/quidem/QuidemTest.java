@@ -873,6 +873,18 @@ public class QuidemTest {
         + "!update\n"
         + "\n";
     check(input2).contains(output3);
+
+    // for DML, using '!ok' works, but is not as pretty as '!update'
+    final String input4 = "!use scott\n"
+        + "delete from scott.dept where deptno = 50;\n"
+        + "!ok\n"
+        + "\n";
+    final String output4 = "!use scott\n"
+        + "delete from scott.dept where deptno = 50;\n"
+        + "C1\n"
+        + "!ok\n"
+        + "\n";
+    check(input4).contains(output4);
   }
 
   /** Tests the '!type' command. */
