@@ -17,7 +17,6 @@
 package net.hydromatic.quidem;
 
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 
 import org.hamcrest.Matcher;
 import org.hamcrest.core.SubstringMatcher;
@@ -36,7 +35,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -634,7 +632,7 @@ public class QuidemTest {
         + "something\n"
         + "!plan\n"
         + "\n",
-        ImmutableList.<Function<Quidem, Quidem>>of(),
+        Quidem.configBuilder(),
         containsString(
             "!use foodmart\n"
                 + "!if (true) {\n"
@@ -1300,7 +1298,7 @@ public class QuidemTest {
     return new Fluent(input);
   }
 
-  static void check(String input, List<Function<Quidem, Quidem>> transformList,
+  static void check(String input, Quidem.ConfigBuilder configBuilder,
       Matcher<String> matcher) {
     final StringWriter writer = new StringWriter();
     final Function<String, Object> env = new Function<String, Object>() {
@@ -1353,11 +1351,13 @@ public class QuidemTest {
             throw new RuntimeException("unknown connection '" + name + "'");
           }
         };
-    Quidem run =
-        new Quidem(new StringReader(input), writer, env, connectionFactory);
-    for (Function<Quidem, Quidem> transform : transformList) {
-      run = transform.apply(run);
-    }
+    final Quidem.Config config = configBuilder
+        .withConnectionFactory(connectionFactory)
+        .withEnv(env)
+        .withWriter(writer)
+        .withReader(new StringReader(input))
+        .build();
+    final Quidem run = new Quidem(config);
     run.execute();
     writer.flush();
     String out = toLinux(writer.toString());
@@ -1396,56 +1396,40 @@ public class QuidemTest {
    * output in various ways. */
   private static class Fluent {
     private final String input;
-    private final List<Function<Quidem, Quidem>> transformList;
+    private final Quidem.ConfigBuilder configBuilder;
 
     public Fluent(String input) {
-      this(input, ImmutableList.<Function<Quidem, Quidem>>of());
+      this(input, Quidem.configBuilder());
     }
 
-    public Fluent(String input, List<Function<Quidem, Quidem>> transformList) {
+    public Fluent(String input, Quidem.ConfigBuilder configBuilder) {
       this.input = input;
-      this.transformList = transformList;
+      this.configBuilder = configBuilder;
     }
 
     public Fluent contains(String string) {
-      check(input, transformList, containsString(string));
+      check(input, configBuilder, containsString(string));
       return this;
     }
 
     public Fluent outputs(String string) {
-      check(input, transformList, equalTo(string));
+      check(input, configBuilder, equalTo(string));
       return this;
     }
 
     public Fluent matches(String pattern) {
-      check(input, transformList, new StringMatches(pattern));
+      check(input, configBuilder, new StringMatches(pattern));
       return this;
     }
 
     public Fluent limit(final int i) {
-      return new Fluent(input,
-          plus(transformList,
-              new Function<Quidem, Quidem>() {
-                public Quidem apply(Quidem quidem) {
-                  quidem.setStackLimit(i);
-                  return quidem;
-                }
-              }));
-    }
-
-    private static <E> List<E> plus(List<E> list, E element) {
-      return ImmutableList.<E>builder().addAll(list).add(element).build();
+      return new Fluent(input, configBuilder.withStackLimit(i));
     }
 
     public Fluent withPropertyHandler(
         final Quidem.PropertyHandler propertyHandler) {
       return new Fluent(input,
-          plus(transformList,
-              new Function<Quidem, Quidem>() {
-                public Quidem apply(Quidem quidem) {
-                  return quidem.withPropertyHandler(propertyHandler);
-                }
-              }));
+          configBuilder.withPropertyHandler(propertyHandler));
     }
   }
 }

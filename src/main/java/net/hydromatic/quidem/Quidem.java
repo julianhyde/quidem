@@ -26,6 +26,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Reader;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
@@ -93,10 +94,7 @@ public class Quidem {
   /** Holds a stack of values for each property. */
   private final Map<String, List<Object>> map =
       new HashMap<String, List<Object>>();
-  private final Reader rawReader;
-  private final Writer rawWriter;
-  private final Function<String, Object> rawEnv;
-  private PropertyHandler propertyHandler;
+  private final Config config;
   /** Result set from SQL statement just executed. */
   private ResultSet resultSet;
   /** Whether to sort result set before printing. */
@@ -107,58 +105,83 @@ public class Quidem {
   private final StringBuilder buf = new StringBuilder();
   private Connection connection;
   private Connection refConnection;
-  private final ConnectionFactory connectionFactory;
   private boolean execute = true;
   private boolean skip = false;
-  private int stackLimit = DEFAULT_MAX_STACK_LENGTH;
   private final Function<String, Object> env;
 
   /** Creates a Quidem interpreter with an empty environment and empty
    * connection factory. */
   public Quidem(Reader reader, Writer writer) {
-    this(reader, writer, EMPTY_ENV, EMPTY_CONNECTION_FACTORY);
+    this(configBuilder().withReader(reader).withWriter(writer).build());
   }
 
-  /** Creates a Quidem interpreter. */
+  /** @deprecated Use {@link #Quidem(Config)} and
+   * {@link ConfigBuilder} */
+  @Deprecated // will be removed before 0.10
   public Quidem(Reader reader, Writer writer, Function<String, Object> env,
       ConnectionFactory connectionFactory) {
-    this(reader, writer, env, connectionFactory, EMPTY_PROPERTY_HANDLER);
+    this(configBuilder()
+        .withReader(reader)
+        .withWriter(writer)
+        .withConnectionFactory(connectionFactory)
+        .withEnv(env)
+        .build());
   }
 
   /** Creates a Quidem interpreter. */
-  private Quidem(Reader reader, Writer writer, Function<String, Object> env,
-      ConnectionFactory connectionFactory, PropertyHandler propertyHandler) {
-    this.rawReader = reader;
-    this.rawWriter = writer;
-    this.rawEnv = env;
-    this.propertyHandler = propertyHandler;
-    if (reader instanceof BufferedReader) {
-      this.reader = (BufferedReader) reader;
+  public Quidem(Config config) {
+    this.config = config;
+    final Reader rawReader = config.reader();
+    if (rawReader instanceof BufferedReader) {
+      this.reader = (BufferedReader) rawReader;
     } else {
-      this.reader = new BufferedReader(reader);
+      this.reader = new BufferedReader(rawReader);
     }
-    if (writer instanceof PrintWriter) {
-      this.writer = (PrintWriter) writer;
+    final Writer rawWriter = config.writer();
+    if (rawWriter instanceof PrintWriter) {
+      this.writer = (PrintWriter) rawWriter;
     } else {
-      this.writer = new PrintWriter(writer);
+      this.writer = new PrintWriter(rawWriter);
     }
-    this.connectionFactory = connectionFactory;
     final List<Object> list = new ArrayList<Object>();
     list.add(OutputFormat.CSV);
     this.map.put(Property.OUTPUTFORMAT.propertyName(), list);
-    this.env = new TopEnv(env);
+    this.env = new TopEnv(config.env());
   }
 
-  /** Creates an instance that uses a given connection factory. */
+  /** Creates a {@link ConfigBuilder} with the default settings. */
+  public static ConfigBuilder configBuilder() {
+    return new ConfigBuilder(new StringReader(""), new StringWriter(),
+        EMPTY_CONNECTION_FACTORY,
+        EMPTY_PROPERTY_HANDLER, EMPTY_ENV,
+        DEFAULT_MAX_STACK_LENGTH);
+  }
+
+  /** Creates a {@link ConfigBuilder} that contains a copy of the current
+   * configuration. */
+  private ConfigBuilder copyConfigBuilder() {
+    return configBuilder()
+        .withReader(config.reader())
+        .withWriter(config.writer())
+        .withConnectionFactory(config.connectionFactory())
+        .withEnv(config.env())
+        .withPropertyHandler(config.propertyHandler());
+  }
+
+  /** @deprecated Use
+   * {@link ConfigBuilder#withConnectionFactory(ConnectionFactory)} */
+  @Deprecated // will be removed before 0.10
   public Quidem withConnectionFactory(ConnectionFactory connectionFactory) {
-    return new Quidem(rawReader, rawWriter, rawEnv, connectionFactory,
-        propertyHandler);
+    return new Quidem(copyConfigBuilder()
+        .withConnectionFactory(connectionFactory).build());
   }
 
-  /** Creates an instance that uses a given property handler. */
+  /** @deprecated Use
+   * {@link ConfigBuilder#withPropertyHandler(PropertyHandler)} */
+  @Deprecated // will be removed before 0.10
   public Quidem withPropertyHandler(PropertyHandler propertyHandler) {
-    return new Quidem(rawReader, rawWriter, rawEnv, connectionFactory,
-        propertyHandler);
+    return new Quidem(copyConfigBuilder()
+        .withPropertyHandler(propertyHandler).build());
   }
 
   /** Entry point from the operating system command line.
@@ -283,23 +306,10 @@ public class Quidem {
     };
   }
 
-  /**
-   * Sets the maximum number of characters of an error stack to be printed.
-   *
-   * <p>If negative, does not limit the stack size.
-   *
-   * <p>The default is {@link #DEFAULT_MAX_STACK_LENGTH}.
-   *
-   * <p>Useful because it prevents {@code diff} from running out of memory if
-   * the error stack is very large. It is preferable to produce a result where
-   * you can see the first N characters of each stack trace than to produce
-   * no result at all.
-   *
-   * @param stackLimit Maximum number of characters to print of each stack
-   *                      trace
-   */
+  /** @deprecated Use {@link ConfigBuilder#withStackLimit(int)}. */
+  @Deprecated // will be removed before 0.10
   public void setStackLimit(int stackLimit) {
-    this.stackLimit = stackLimit;
+    throw new UnsupportedOperationException("no longer supported");
   }
 
   private boolean getBoolean(List<String> names) {
@@ -853,6 +863,7 @@ public class Quidem {
   }
 
   private void stack(Throwable e, Writer w) {
+    final int stackLimit = config.stackLimit();
     if (stackLimit >= 0) {
       w = new LimitWriter(w, stackLimit);
     }
@@ -915,6 +926,7 @@ public class Quidem {
       if (refConnection != null) {
         refConnection.close();
       }
+      final ConnectionFactory connectionFactory = config.connectionFactory();
       connection = connectionFactory.connect(name, false);
       refConnection = connectionFactory.connect(name, true);
     }
@@ -1382,10 +1394,6 @@ public class Quidem {
     Connection connect(String name, boolean reference) throws Exception;
   }
 
-  @Deprecated // will be removed before 0.9
-  public interface NewConnectionFactory extends ConnectionFactory {
-  }
-
   /** Property whose value may be set. */
   enum Property {
     OUTPUTFORMAT,
@@ -1434,7 +1442,7 @@ public class Quidem {
       } else {
         list.set(list.size() - 1, value);
       }
-      propertyHandler.onSet(propertyName, value);
+      config.propertyHandler().onSet(propertyName, value);
     }
   }
 
@@ -1470,7 +1478,7 @@ public class Quidem {
         list.remove(list.size() - 1);
       }
       final Object newValue = env.apply(propertyName);
-      propertyHandler.onSet(propertyName, newValue);
+      config.propertyHandler().onSet(propertyName, newValue);
     }
   }
 
@@ -1616,6 +1624,116 @@ public class Quidem {
   /** Called whenever a property's value is changed. */
   public interface PropertyHandler {
     void onSet(String propertyName, Object value);
+  }
+
+  /** The information needed to start Quidem. */
+  public interface Config {
+    Reader reader();
+    Writer writer();
+    ConnectionFactory connectionFactory();
+    PropertyHandler propertyHandler();
+    Function<String, Object> env();
+
+    /**
+     * Returns the maximum number of characters of an error stack to be printed.
+     *
+     * <p>If negative, does not limit the stack size.
+     *
+     * <p>The default is {@link #DEFAULT_MAX_STACK_LENGTH}.
+     *
+     * <p>Useful because it prevents {@code diff} from running out of memory if
+     * the error stack is very large. It is preferable to produce a result where
+     * you can see the first N characters of each stack trace than to produce
+     * no result at all.
+     */
+    int stackLimit();
+  }
+
+  /** Builds a {@link Config}. */
+  public static class ConfigBuilder {
+    private final Reader reader;
+    private final Writer writer;
+    private final ConnectionFactory connectionFactory;
+    private final PropertyHandler propertyHandler;
+    private final Function<String, Object> env;
+    private final int stackLimit;
+
+    private ConfigBuilder(Reader reader, Writer writer,
+        ConnectionFactory connectionFactory, PropertyHandler propertyHandler,
+        Function<String, Object> env, int stackLimit) {
+      this.reader = Preconditions.checkNotNull(reader);
+      this.writer = Preconditions.checkNotNull(writer);
+      this.connectionFactory = Preconditions.checkNotNull(connectionFactory);
+      this.propertyHandler = Preconditions.checkNotNull(propertyHandler);
+      this.env = Preconditions.checkNotNull(env);
+      this.stackLimit = stackLimit;
+    }
+
+    /** Returns a {@link Config}. */
+    public Config build() {
+      return new Config() {
+        public Reader reader() {
+          return reader;
+        }
+
+        public Writer writer() {
+          return writer;
+        }
+
+        public ConnectionFactory connectionFactory() {
+          return connectionFactory;
+        }
+
+        public PropertyHandler propertyHandler() {
+          return propertyHandler;
+        }
+
+        public Function<String, Object> env() {
+          return env;
+        }
+
+        public int stackLimit() {
+          return stackLimit;
+        }
+      };
+    }
+
+    /** Sets {@link Config#reader}. */
+    public ConfigBuilder withReader(Reader reader) {
+      return new ConfigBuilder(reader, writer, connectionFactory,
+          propertyHandler, env, stackLimit);
+    }
+
+    /** Sets {@link Config#writer}. */
+    public ConfigBuilder withWriter(Writer writer) {
+      return new ConfigBuilder(reader, writer, connectionFactory,
+          propertyHandler, env, stackLimit);
+    }
+
+    /** Sets {@link Config#propertyHandler}. */
+    public ConfigBuilder withPropertyHandler(PropertyHandler propertyHandler) {
+      return new ConfigBuilder(reader, writer, connectionFactory,
+          propertyHandler, env, stackLimit);
+    }
+
+    /** Sets {@link Config#env}. */
+    public ConfigBuilder withEnv(Function<String, Object> env) {
+      return new ConfigBuilder(reader, writer, connectionFactory,
+          propertyHandler, env, stackLimit);
+    }
+
+    /** Sets {@link Config#connectionFactory}. */
+    public ConfigBuilder withConnectionFactory(
+        ConnectionFactory connectionFactory) {
+      return new ConfigBuilder(reader, writer, connectionFactory,
+          propertyHandler, env, stackLimit);
+    }
+
+    /** Sets {@link Config#stackLimit}. */
+    public ConfigBuilder withStackLimit(int stackLimit) {
+      return new ConfigBuilder(reader, writer, connectionFactory,
+          propertyHandler, env, stackLimit);
+    }
   }
 }
 

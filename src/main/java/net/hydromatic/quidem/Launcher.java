@@ -181,7 +181,13 @@ class Launcher {
         return envMap.get(input);
       }
     };
-    return new Quidem(reader, writer, env, connectionFactory);
+    final Quidem.Config config = Quidem.configBuilder()
+        .withReader(reader)
+        .withWriter(writer)
+        .withEnv(env)
+        .withConnectionFactory(connectionFactory)
+        .build();
+    return new Quidem(config);
   }
 
   private ParseException error(String error) {
