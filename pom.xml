@@ -56,6 +56,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <top.dir>${project.basedir}</top.dir>
+    <maven-enforcer-plugin.version>3.0.0-M1</maven-enforcer-plugin.version>
   </properties>
 
   <!-- Environment settings. -->
@@ -78,10 +79,6 @@
     <url>http://github.com/julianhyde/quidem/tree/master</url>
     <tag>HEAD</tag>
   </scm>
-
-  <prerequisites>
-    <maven>3.2.1</maven><!-- prerequisite of some plugins -->
-  </prerequisites>
 
   <repositories>
     <repository>
@@ -174,6 +171,40 @@
             <goals>
               <goal>check</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>${maven-enforcer-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>enforce-java</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireJavaVersion>
+                  <version>[1.6,)</version>
+                </requireJavaVersion>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <!-- prerequisite of some plugins -->
+                  <version>[3.2.1,)</version>
+                </requireMavenVersion>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>
