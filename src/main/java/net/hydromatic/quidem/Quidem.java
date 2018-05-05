@@ -78,6 +78,14 @@ public class Quidem {
   public static final ConnectionFactory EMPTY_CONNECTION_FACTORY =
       new ChainingConnectionFactory(ImmutableList.<ConnectionFactory>of());
 
+  /** A command handler that defines no commands. */
+  public static final CommandHandler EMPTY_COMMAND_HANDLER =
+      new CommandHandler() {
+        public Command parseCommand(String line) {
+          return null;
+        }
+      };
+
   /** A property handler that does nothing. */
   public static final PropertyHandler EMPTY_PROPERTY_HANDLER =
       new PropertyHandler() {
@@ -97,8 +105,6 @@ public class Quidem {
   private final Config config;
   /** Result set from SQL statement just executed. */
   private ResultSet resultSet;
-  /** Whether to sort result set before printing. */
-  private boolean sort;
   private Throwable resultSetException;
   private final List<String> lines = new ArrayList<String>();
   private String pushedLine;
@@ -152,9 +158,8 @@ public class Quidem {
   /** Creates a {@link ConfigBuilder} with the default settings. */
   public static ConfigBuilder configBuilder() {
     return new ConfigBuilder(new StringReader(""), new StringWriter(),
-        EMPTY_CONNECTION_FACTORY,
-        EMPTY_PROPERTY_HANDLER, EMPTY_ENV,
-        DEFAULT_MAX_STACK_LENGTH);
+        EMPTY_CONNECTION_FACTORY, EMPTY_COMMAND_HANDLER,
+        EMPTY_PROPERTY_HANDLER, EMPTY_ENV, DEFAULT_MAX_STACK_LENGTH);
   }
 
   /** Creates a {@link ConfigBuilder} that contains a copy of the current
@@ -164,8 +169,9 @@ public class Quidem {
         .withReader(config.reader())
         .withWriter(config.writer())
         .withConnectionFactory(config.connectionFactory())
-        .withEnv(config.env())
-        .withPropertyHandler(config.propertyHandler());
+        .withCommandHandler(config.commandHandler())
+        .withPropertyHandler(config.propertyHandler())
+        .withEnv(config.env());
   }
 
   /** @deprecated Use
@@ -221,7 +227,7 @@ public class Quidem {
     try {
       Command command = new Parser().parse();
       try {
-        command.execute(execute);
+        command.execute(new ContextImpl(), execute);
         close();
       } catch (Exception e) {
         throw new RuntimeException(
@@ -243,6 +249,200 @@ public class Quidem {
         // ignore
       }
     }
+  }
+
+  private void use(String connectionName) throws Exception {
+    if (connection != null) {
+      connection.close();
+    }
+    if (refConnection != null) {
+      refConnection.close();
+    }
+    final ConnectionFactory connectionFactory =
+        config.connectionFactory();
+    connection = connectionFactory.connect(connectionName, false);
+    refConnection = connectionFactory.connect(connectionName, true);
+  }
+
+  protected void echo(Iterable<String> lines) {
+    for (String line : lines) {
+      try {
+        writer.println(line);
+      } catch (Exception e) {
+        throw new RuntimeException("Error while writing output", e);
+      }
+    }
+  }
+
+  private void update(String sql, boolean execute, boolean output,
+      Command.ResultChecker checker, Command.Context x) throws Exception {
+    if (execute) {
+      if (connection == null) {
+        throw new RuntimeException("no connection");
+      }
+      final Statement statement = connection.createStatement();
+      if (resultSet != null) {
+        resultSet.close();
+      }
+      try {
+        if (DEBUG) {
+          System.out.println("execute: " + this);
+        }
+        resultSet = null;
+        resultSetException = null;
+        final int updateCount = statement.executeUpdate(sql);
+        writer.println("(" + updateCount
+            + ((updateCount == 1) ? " row" : " rows")
+            + " modified)");
+      } catch (SQLException e) {
+        resultSetException = e;
+      } catch (Throwable e) {
+        System.out.println("Warning: JDBC driver threw non-SQLException");
+        resultSetException = e;
+      } finally {
+        statement.close();
+      }
+
+      checker.checkResultSet(x, resultSetException);
+      writer.println();
+
+      resultSet = null;
+      resultSetException = null;
+    } else {
+      echo(checker.getOutput(x));
+    }
+    echo(lines);
+  }
+
+  private void checkResult(String sql, boolean sort, boolean execute,
+      boolean output, Command.ResultChecker checker, Command.Context x)
+      throws Exception {
+    if (execute) {
+      if (connection == null) {
+        throw new RuntimeException("no connection");
+      }
+      final Statement statement = connection.createStatement();
+      if (resultSet != null) {
+        resultSet.close();
+      }
+      try {
+        try {
+          if (DEBUG) {
+            System.out.println("execute: " + this);
+          }
+          resultSet = null;
+          resultSetException = null;
+          resultSet = statement.executeQuery(sql);
+        } catch (SQLException e) {
+          resultSetException = e;
+        } catch (Throwable e) {
+          System.out.println("Warning: JDBC driver threw non-SQLException");
+          resultSetException = e;
+        }
+        if (resultSet != null) {
+          final OutputFormat format =
+              (OutputFormat) env.apply(Property.OUTPUTFORMAT.propertyName());
+          final List<String> headerLines = new ArrayList<String>();
+          final List<String> bodyLines = new ArrayList<String>();
+          final List<String> footerLines = new ArrayList<String>();
+          format.format(resultSet, headerLines, bodyLines, footerLines, sort);
+
+          // Construct the original body.
+          // Strip the header and footer from the actual output.
+          // We assume original and actual header have the same line count.
+          // Ditto footers.
+          final List<String> expectedLines = checker.getOutput(x);
+          final List<String> lines = new ArrayList<String>(expectedLines);
+          final List<String> actualLines =
+              ImmutableList.<String>builder()
+                  .addAll(headerLines)
+                  .addAll(bodyLines)
+                  .addAll(footerLines)
+                  .build();
+          for (String line : headerLines) {
+            if (!lines.isEmpty()) {
+              lines.remove(0);
+            }
+          }
+          for (String line : footerLines) {
+            if (!lines.isEmpty()) {
+              lines.remove(lines.size() - 1);
+            }
+          }
+
+          // Print the actual header.
+          for (String line : headerLines) {
+            if (output) {
+              writer.println(line);
+            }
+          }
+          // Print all lines that occurred in the actual output ("bodyLines"),
+          // but in their original order ("lines").
+          for (String line : lines) {
+            if (sort) {
+              if (bodyLines.remove(line)) {
+                if (output) {
+                  writer.println(line);
+                }
+              }
+            } else {
+              if (!bodyLines.isEmpty()
+                  && bodyLines.get(0).equals(line)) {
+                bodyLines.remove(0);
+                if (output) {
+                  writer.println(line);
+                }
+              }
+            }
+          }
+          // Print lines that occurred in the actual output but not original.
+          for (String line : bodyLines) {
+            if (output) {
+              writer.println(line);
+            }
+          }
+          // Print the actual footer.
+          for (String line : footerLines) {
+            if (output) {
+              writer.println(line);
+            }
+          }
+          resultSet.close();
+          if (!output) {
+            if (!actualLines.equals(expectedLines)) {
+              final StringWriter buf = new StringWriter();
+              final PrintWriter w = new PrintWriter(buf);
+              w.println("Reference query returned different results.");
+              w.println("expected:");
+              for (String line : expectedLines) {
+                w.println(line);
+              }
+              w.println("actual:");
+              for (String line : actualLines) {
+                w.println(line);
+              }
+              w.close();
+              throw new IllegalArgumentException(buf.toString());
+            }
+          }
+        }
+
+        checker.checkResultSet(x, resultSetException);
+
+        if (resultSet == null && resultSetException == null) {
+          throw new AssertionError("neither resultSet nor exception set");
+        }
+        resultSet = null;
+        resultSetException = null;
+      } finally {
+        statement.close();
+      }
+    } else {
+      if (output) {
+        echo(checker.getOutput(x));
+      }
+    }
+    echo(lines);
   }
 
   Command of(List<Command> commands) {
@@ -503,6 +703,10 @@ public class Quidem {
           if (line.equals("}")) {
             return null;
           }
+          final Command command = config.commandHandler().parseCommand(line);
+          if (command != null) {
+            return command;
+          }
           throw new RuntimeException("Unknown command: " + line);
         }
         buf.setLength(0);
@@ -530,7 +734,8 @@ public class Quidem {
         lines.clear();
         if (last) {
           String sql = buf.toString();
-          return new SqlCommand(content, sql, null);
+          final boolean sort = !isProbablyDeterministic(sql);
+          return new SqlCommand(content, sql, sort);
         }
       }
     }
@@ -577,7 +782,7 @@ public class Quidem {
     CSV {
       @Override public void format(ResultSet resultSet,
           List<String> headerLines, List<String> bodyLines,
-          List<String> footerLines, Quidem run) throws Exception {
+          List<String> footerLines, boolean sort) throws Exception {
         final ResultSetMetaData metaData = resultSet.getMetaData();
         final int n = metaData.getColumnCount();
         final StringBuilder buf = new StringBuilder();
@@ -600,7 +805,7 @@ public class Quidem {
           lines.add(buf.toString());
           buf.setLength(0);
         }
-        if (run.sort) {
+        if (sort) {
           Collections.sort(lines);
         }
         bodyLines.addAll(lines);
@@ -641,9 +846,9 @@ public class Quidem {
     ORACLE {
       @Override public void format(ResultSet resultSet,
           List<String> headerLines, List<String> bodyLines,
-          List<String> footerLines, Quidem run) throws Exception {
-        Quidem.format(
-            resultSet, headerLines, bodyLines, footerLines, run.sort, this);
+          List<String> footerLines, boolean sort) throws Exception {
+        Quidem.format(resultSet, headerLines, bodyLines, footerLines, sort,
+            this);
       }
     },
 
@@ -657,9 +862,9 @@ public class Quidem {
     PSQL {
       @Override public void format(ResultSet resultSet,
           List<String> headerLines, List<String> bodyLines,
-          List<String> footerLines, Quidem run) throws Exception {
-        Quidem.format(
-            resultSet, headerLines, bodyLines, footerLines, run.sort, this);
+          List<String> footerLines, boolean sort) throws Exception {
+        Quidem.format(resultSet, headerLines, bodyLines, footerLines, sort,
+            this);
       }
     },
 
@@ -675,14 +880,14 @@ public class Quidem {
     MYSQL {
       @Override public void format(ResultSet resultSet,
           List<String> headerLines, List<String> bodyLines,
-          List<String> footerLines, Quidem run) throws Exception {
-        Quidem.format(
-            resultSet, headerLines, bodyLines, footerLines, run.sort, this);
+          List<String> footerLines, boolean sort) throws Exception {
+        Quidem.format(resultSet, headerLines, bodyLines, footerLines, sort,
+            this);
       }
     };
 
     public abstract void format(ResultSet resultSet, List<String> headerLines,
-        List<String> bodyLines, List<String> footerLines, Quidem run)
+        List<String> bodyLines, List<String> footerLines, boolean sort)
         throws Exception;
   }
 
@@ -856,52 +1061,9 @@ public class Quidem {
     return s;
   }
 
-  private String stack(Throwable e) {
-    final StringWriter buf = new StringWriter();
-    stack(e, buf);
-    return buf.toString();
-  }
-
-  private void stack(Throwable e, Writer w) {
-    final int stackLimit = config.stackLimit();
-    if (stackLimit >= 0) {
-      w = new LimitWriter(w, stackLimit);
-    }
-    final PrintWriter pw;
-    if (w instanceof PrintWriter) {
-      pw = (PrintWriter) w;
-    } else {
-      pw = new PrintWriter(w);
-    }
-    e.printStackTrace(pw);
-    if (stackLimit >= 0) {
-      assert w instanceof LimitWriter;
-      ((LimitWriter) w).ellipsis(" (stack truncated)\n");
-    }
-  }
-
-  /** Command. */
-  interface Command {
-    void execute(boolean execute) throws Exception;
-  }
-
-  /** Base class for implementations of Command. */
-  abstract class AbstractCommand implements Command {
-    protected Command echo(Iterable<String> lines) {
-      for (String line : lines) {
-        try {
-          writer.println(line);
-        } catch (Exception e) {
-          throw new RuntimeException("Error while writing output", e);
-        }
-      }
-      return this;
-    }
-  }
-
   /** Base class for implementations of Command that have one piece of source
    * code. */
-  abstract class SimpleCommand extends AbstractCommand {
+  abstract static class SimpleCommand extends AbstractCommand {
     protected final ImmutableList<String> lines;
 
     SimpleCommand(List<String> lines) {
@@ -910,7 +1072,7 @@ public class Quidem {
   }
 
   /** Command that sets the current connection. */
-  class UseCommand extends SimpleCommand {
+  static class UseCommand extends SimpleCommand {
     private final String name;
 
     UseCommand(List<String> lines, String name) {
@@ -918,22 +1080,15 @@ public class Quidem {
       this.name = name;
     }
 
-    public void execute(boolean execute) throws Exception {
-      echo(lines);
-      if (connection != null) {
-        connection.close();
-      }
-      if (refConnection != null) {
-        refConnection.close();
-      }
-      final ConnectionFactory connectionFactory = config.connectionFactory();
-      connection = connectionFactory.connect(name, false);
-      refConnection = connectionFactory.connect(name, true);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.echo(lines);
+      x.use(name);
     }
   }
 
   /** Command that executes a SQL statement and checks its result. */
-  abstract class CheckResultCommand extends SimpleCommand {
+  abstract static class CheckResultCommand extends SimpleCommand
+      implements Command.ResultChecker {
     protected final SqlCommand sqlCommand;
     protected final boolean output;
 
@@ -944,149 +1099,20 @@ public class Quidem {
       this.output = output;
     }
 
-    protected abstract List<String> getOutput() throws Exception;
-
-    public void execute(boolean execute) throws Exception {
-      if (execute) {
-        if (connection == null) {
-          throw new RuntimeException("no connection");
-        }
-        final Statement statement = connection.createStatement();
-        if (resultSet != null) {
-          resultSet.close();
-        }
-        try {
-          try {
-            if (DEBUG) {
-              System.out.println("execute: " + this);
-            }
-            resultSet = null;
-            resultSetException = null;
-            resultSet = statement.executeQuery(sqlCommand.sql);
-            final String sql = sqlCommand.sql;
-            sort = !isProbablyDeterministic(sql);
-          } catch (SQLException e) {
-            resultSetException = e;
-          } catch (Throwable e) {
-            System.out.println("Warning: JDBC driver threw non-SQLException");
-            resultSetException = e;
-          }
-          if (resultSet != null) {
-            final OutputFormat format =
-                (OutputFormat) env.apply(Property.OUTPUTFORMAT.propertyName());
-            final List<String> headerLines = new ArrayList<String>();
-            final List<String> bodyLines = new ArrayList<String>();
-            final List<String> footerLines = new ArrayList<String>();
-            format.format(resultSet, headerLines, bodyLines, footerLines,
-                Quidem.this);
-
-            // Construct the original body.
-            // Strip the header and footer from the actual output.
-            // We assume original and actual header have the same line count.
-            // Ditto footers.
-            final List<String> expectedLines = getOutput();
-            final List<String> lines = new ArrayList<String>(expectedLines);
-            final List<String> actualLines =
-                ImmutableList.<String>builder()
-                    .addAll(headerLines)
-                    .addAll(bodyLines)
-                    .addAll(footerLines)
-                    .build();
-            for (String line : headerLines) {
-              if (!lines.isEmpty()) {
-                lines.remove(0);
-              }
-            }
-            for (String line : footerLines) {
-              if (!lines.isEmpty()) {
-                lines.remove(lines.size() - 1);
-              }
-            }
-
-            // Print the actual header.
-            for (String line : headerLines) {
-              if (this.output) {
-                writer.println(line);
-              }
-            }
-            // Print all lines that occurred in the actual output ("bodyLines"),
-            // but in their original order ("lines").
-            for (String line : lines) {
-              if (sort) {
-                if (bodyLines.remove(line)) {
-                  if (this.output) {
-                    writer.println(line);
-                  }
-                }
-              } else {
-                if (!bodyLines.isEmpty()
-                    && bodyLines.get(0).equals(line)) {
-                  bodyLines.remove(0);
-                  if (this.output) {
-                    writer.println(line);
-                  }
-                }
-              }
-            }
-            // Print lines that occurred in the actual output but not original.
-            for (String line : bodyLines) {
-              if (this.output) {
-                writer.println(line);
-              }
-            }
-            // Print the actual footer.
-            for (String line : footerLines) {
-              if (this.output) {
-                writer.println(line);
-              }
-            }
-            resultSet.close();
-            if (!output) {
-              if (!actualLines.equals(expectedLines)) {
-                final StringWriter buf = new StringWriter();
-                final PrintWriter w = new PrintWriter(buf);
-                w.println("Reference query returned different results.");
-                w.println("expected:");
-                for (String line : expectedLines) {
-                  w.println(line);
-                }
-                w.println("actual:");
-                for (String line : actualLines) {
-                  w.println(line);
-                }
-                w.close();
-                throw new IllegalArgumentException(buf.toString());
-              }
-            }
-          }
-
-          checkResultSet(resultSetException);
-
-          if (resultSet == null && resultSetException == null) {
-            throw new AssertionError("neither resultSet nor exception set");
-          }
-          resultSet = null;
-          resultSetException = null;
-        } finally {
-          statement.close();
-        }
-      } else {
-        if (output) {
-          echo(getOutput());
-        }
-      }
-      echo(lines);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.checkResult(sqlCommand.sql, sqlCommand.sort, execute, output, this);
+      x.echo(lines);
     }
 
-    protected void checkResultSet(Throwable resultSetException) {
+    public void checkResultSet(Context x, Throwable resultSetException) {
       if (resultSetException != null) {
-        stack(resultSetException, writer);
+        x.stack(resultSetException, x.writer());
       }
     }
   }
 
   /** Command that executes a SQL statement and checks its result. */
-  class OkCommand extends CheckResultCommand {
+  static class OkCommand extends CheckResultCommand {
     protected final ImmutableList<String> output;
 
     OkCommand(List<String> lines,
@@ -1099,14 +1125,14 @@ public class Quidem {
       return "OkCommand [sql: " + sqlCommand.sql + "]";
     }
 
-    protected List<String> getOutput() {
+    public List<String> getOutput(Context x) {
       return output;
     }
   }
 
   /** Command that executes a SQL statement and compares the result with a
    * reference database. */
-  class VerifyCommand extends CheckResultCommand {
+  static class VerifyCommand extends CheckResultCommand {
     VerifyCommand(List<String> lines, SqlCommand sqlCommand) {
       super(lines, sqlCommand, false);
     }
@@ -1115,20 +1141,20 @@ public class Quidem {
       return "VerifyCommand [sql: " + sqlCommand.sql + "]";
     }
 
-    protected List<String> getOutput() throws Exception {
-      if (refConnection == null) {
+    public List<String> getOutput(Context x) throws Exception {
+      if (x.refConnection() == null) {
         throw new IllegalArgumentException("no reference connection");
       }
-      final Statement statement = refConnection.createStatement();
+      final Statement statement = x.refConnection().createStatement();
       final ResultSet resultSet = statement.executeQuery(sqlCommand.sql);
       try {
         final OutputFormat format =
-            (OutputFormat) env.apply(Property.OUTPUTFORMAT.propertyName());
+            (OutputFormat) x.env().apply(Property.OUTPUTFORMAT.propertyName());
         final List<String> headerLines = new ArrayList<String>();
         final List<String> bodyLines = new ArrayList<String>();
         final List<String> footerLines = new ArrayList<String>();
         format.format(resultSet, headerLines, bodyLines, footerLines,
-            Quidem.this);
+            sqlCommand.sort);
         return ImmutableList.<String>builder()
             .addAll(headerLines)
             .addAll(bodyLines)
@@ -1141,7 +1167,8 @@ public class Quidem {
   }
 
   /** Command that executes a SQL DML command and checks its count. */
-  class UpdateCommand extends SimpleCommand {
+  static class UpdateCommand extends SimpleCommand
+      implements Command.ResultChecker {
     private final SqlCommand sqlCommand;
     protected final ImmutableList<String> output;
 
@@ -1156,80 +1183,51 @@ public class Quidem {
       return "UpdateCommand [sql: " + sqlCommand.sql + "]";
     }
 
-    public void execute(boolean execute) throws Exception {
-      if (execute) {
-        if (connection == null) {
-          throw new RuntimeException("no connection");
-        }
-        final Statement statement = connection.createStatement();
-        if (resultSet != null) {
-          resultSet.close();
-        }
-        try {
-          if (DEBUG) {
-            System.out.println("execute: " + this);
-          }
-          resultSet = null;
-          resultSetException = null;
-          final int updateCount = statement.executeUpdate(sqlCommand.sql);
-          writer.println("(" + updateCount
-              + ((updateCount == 1) ? " row" : " rows")
-              + " modified)");
-          final String sql = sqlCommand.sql;
-          sort = !isProbablyDeterministic(sql);
-        } catch (SQLException e) {
-          resultSetException = e;
-        } catch (Throwable e) {
-          System.out.println("Warning: JDBC driver threw non-SQLException");
-          resultSetException = e;
-        } finally {
-          statement.close();
-        }
-
-        checkResultSet(resultSetException);
-        writer.println();
-
-        resultSet = null;
-        resultSetException = null;
-      } else {
-        echo(output);
-      }
-      echo(lines);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.update(sqlCommand.sql, execute, true, this);
+      x.echo(lines);
     }
 
-    protected void checkResultSet(Throwable resultSetException) {
+    public List<String> getOutput(Context x) {
+      throw new UnsupportedOperationException();
+    }
+
+    public void checkResultSet(Context x, Throwable resultSetException) {
       if (resultSetException != null) {
-        stack(resultSetException, writer);
+        x.stack(resultSetException, x.writer());
       }
     }
   }
 
   /** Command that executes a SQL statement and checks that it throws a given
    * error. */
-  class ErrorCommand extends OkCommand {
+  static class ErrorCommand extends OkCommand {
     ErrorCommand(List<String> lines, SqlCommand sqlCommand,
         ImmutableList<String> output) {
       super(lines, sqlCommand, output);
     }
 
-    @Override protected void checkResultSet(Throwable resultSetException) {
+    @Override public void checkResultSet(Context x,
+        Throwable resultSetException) {
       if (resultSetException == null) {
-        writer.println("Expected error, but SQL command did not give one");
+        x.writer().println("Expected error, but SQL command did not give one");
         return;
       }
       if (!output.isEmpty()) {
-        final String actual = squash(stack(resultSetException));
+        final StringWriter sw = new StringWriter();
+        x.stack(resultSetException, sw);
+        final String actual = squash(sw.toString());
         final String expected = squash(concat(output, false));
         if (actual.contains(expected)) {
           // They gave an expected error, and the actual error does not match.
           // Print the actual error. This will cause a diff.
           for (String line : output) {
-            writer.println(line);
+            x.writer().println(line);
           }
           return;
         }
       }
-      super.checkResultSet(resultSetException);
+      super.checkResultSet(x, resultSetException);
     }
 
     private String squash(String s) {
@@ -1254,7 +1252,7 @@ public class Quidem {
   }
 
   /** Command that prints the plan for the current query. */
-  class ExplainCommand extends SimpleCommand {
+  static class ExplainCommand extends SimpleCommand {
     private final SqlCommand sqlCommand;
     private final ImmutableList<String> content;
 
@@ -1270,9 +1268,9 @@ public class Quidem {
       return "ExplainCommand [sql: " + sqlCommand.sql + "]";
     }
 
-    public void execute(boolean execute) throws Exception {
+    public void execute(Context x, boolean execute) throws Exception {
       if (execute) {
-        final Statement statement = connection.createStatement();
+        final Statement statement = x.connection().createStatement();
         try {
           final ResultSet resultSet =
               statement.executeQuery("explain plan for " + sqlCommand.sql);
@@ -1288,8 +1286,8 @@ public class Quidem {
             if (buf.length() == 0) {
               throw new AssertionError("explain returned 0 records");
             }
-            writer.print(buf);
-            writer.flush();
+            x.writer().print(buf);
+            x.writer().flush();
           } finally {
             resultSet.close();
           }
@@ -1297,19 +1295,18 @@ public class Quidem {
           statement.close();
         }
       } else {
-        echo(content);
+        x.echo(content);
       }
-      echo(lines);
+      x.echo(lines);
     }
   }
 
   /** Command that prints the row type for the current query. */
-  class TypeCommand extends SimpleCommand {
+  static class TypeCommand extends SimpleCommand {
     private final SqlCommand sqlCommand;
     private final ImmutableList<String> content;
 
-    TypeCommand(List<String> lines,
-        SqlCommand sqlCommand,
+    TypeCommand(List<String> lines, SqlCommand sqlCommand,
         ImmutableList<String> content) {
       super(lines);
       this.sqlCommand = sqlCommand;
@@ -1320,10 +1317,10 @@ public class Quidem {
       return "TypeCommand [sql: " + sqlCommand.sql + "]";
     }
 
-    public void execute(boolean execute) throws Exception {
+    public void execute(Context x, boolean execute) throws Exception {
       if (execute) {
         final PreparedStatement statement =
-            connection.prepareStatement(sqlCommand.sql);
+            x.connection().prepareStatement(sqlCommand.sql);
         try {
           final ResultSetMetaData metaData = statement.getMetaData();
           final StringBuilder buf = new StringBuilder();
@@ -1350,29 +1347,32 @@ public class Quidem {
             }
             buf.append("\n");
           }
-          writer.print(buf);
-          writer.flush();
+          x.writer().print(buf);
+          x.writer().flush();
         } finally {
           statement.close();
         }
       } else {
-        echo(content);
+        x.echo(content);
       }
-      echo(lines);
+      x.echo(lines);
     }
   }
 
   /** Command that executes a SQL statement. */
-  private class SqlCommand extends SimpleCommand {
+  private static class SqlCommand extends SimpleCommand {
     private final String sql;
+    /** Whether to sort result set before printing. */
+    private final boolean sort;
 
-    protected SqlCommand(List<String> lines, String sql, List<String> output) {
+    protected SqlCommand(List<String> lines, String sql, boolean sort) {
       super(lines);
       this.sql = Preconditions.checkNotNull(sql);
+      this.sort = sort;
     }
 
-    public void execute(boolean execute) throws Exception {
-      echo(lines);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.echo(lines);
     }
   }
 
@@ -1430,8 +1430,8 @@ public class Quidem {
           || value instanceof OutputFormat);
     }
 
-    public void execute(boolean execute) throws Exception {
-      echo(lines);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.echo(lines);
       List<Object> list = map.get(propertyName);
       if (list == null) {
         list = new ArrayList<Object>();
@@ -1469,8 +1469,8 @@ public class Quidem {
           || propertyName.equals(property.propertyName()));
     }
 
-    public void execute(boolean execute) throws Exception {
-      echo(lines);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.echo(lines);
       List<Object> list = map.get(propertyName);
       if (list == null || list.isEmpty()) {
         writer.println("Cannot pop " + propertyName + ": stack is empty");
@@ -1496,10 +1496,10 @@ public class Quidem {
           || propertyName.equals(property.propertyName()));
     }
 
-    public void execute(boolean execute) throws Exception {
+    public void execute(Context x, boolean execute) throws Exception {
       Object value = env.apply(propertyName);
       writer.println(propertyName + " " + value);
-      echo(lines);
+      x.echo(lines);
     }
   }
 
@@ -1509,8 +1509,8 @@ public class Quidem {
       super(lines);
     }
 
-    public void execute(boolean execute) throws Exception {
-      echo(lines);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.echo(lines);
     }
   }
 
@@ -1529,8 +1529,8 @@ public class Quidem {
       this.command = command;
     }
 
-    public void execute(boolean execute) throws Exception {
-      echo(ifLines);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.echo(ifLines);
       // Switch to a mode where we don't execute, just echo.
       boolean oldExecute = Quidem.this.execute;
       boolean newExecute;
@@ -1541,8 +1541,8 @@ public class Quidem {
         // If "enable" is true, stay in the current mode.
         newExecute = getBoolean(variables);
       }
-      command.execute(newExecute);
-      echo(endLines);
+      command.execute(x, newExecute);
+      x.echo(endLines);
     }
   }
 
@@ -1553,8 +1553,8 @@ public class Quidem {
       super(lines);
     }
 
-    public void execute(boolean execute) throws Exception {
-      echo(lines);
+    public void execute(Context x, boolean execute) throws Exception {
+      x.echo(lines);
       // Switch to a mode where we don't execute, just echo.
       // Set "skip" so we don't leave that mode.
       skip = true;
@@ -1570,7 +1570,7 @@ public class Quidem {
       this.commands = commands;
     }
 
-    public void execute(boolean execute) throws Exception {
+    public void execute(Context x, boolean execute) throws Exception {
       // We handle all RuntimeExceptions, all Exceptions, and a limited number
       // of Errors. If we don't understand an Error (e.g. OutOfMemoryError)
       // then we print it out, then abort.
@@ -1578,7 +1578,7 @@ public class Quidem {
         boolean abort = false;
         Throwable e = null;
         try {
-          command.execute(execute && Quidem.this.execute);
+          command.execute(x, execute && Quidem.this.execute);
         } catch (RuntimeException e0) {
           e = e0;
         } catch (Exception e0) {
@@ -1591,9 +1591,9 @@ public class Quidem {
           abort = true;
         }
         if (e != null) {
-          command.execute(false); // echo the command
+          command.execute(x, false); // echo the command
           writer.println("Error while executing command " + command);
-          stack(e, writer);
+          x.stack(e, writer);
           if (abort) {
             throw (Error) e;
           }
@@ -1631,6 +1631,7 @@ public class Quidem {
     Reader reader();
     Writer writer();
     ConnectionFactory connectionFactory();
+    CommandHandler commandHandler();
     PropertyHandler propertyHandler();
     Function<String, Object> env();
 
@@ -1654,16 +1655,19 @@ public class Quidem {
     private final Reader reader;
     private final Writer writer;
     private final ConnectionFactory connectionFactory;
+    private final CommandHandler commandHandler;
     private final PropertyHandler propertyHandler;
     private final Function<String, Object> env;
     private final int stackLimit;
 
     private ConfigBuilder(Reader reader, Writer writer,
-        ConnectionFactory connectionFactory, PropertyHandler propertyHandler,
-        Function<String, Object> env, int stackLimit) {
+        ConnectionFactory connectionFactory, CommandHandler commandHandler,
+        PropertyHandler propertyHandler, Function<String, Object> env,
+        int stackLimit) {
       this.reader = Preconditions.checkNotNull(reader);
       this.writer = Preconditions.checkNotNull(writer);
       this.connectionFactory = Preconditions.checkNotNull(connectionFactory);
+      this.commandHandler = commandHandler;
       this.propertyHandler = Preconditions.checkNotNull(propertyHandler);
       this.env = Preconditions.checkNotNull(env);
       this.stackLimit = stackLimit;
@@ -1684,6 +1688,10 @@ public class Quidem {
           return connectionFactory;
         }
 
+        public CommandHandler commandHandler() {
+          return commandHandler;
+        }
+
         public PropertyHandler propertyHandler() {
           return propertyHandler;
         }
@@ -1701,38 +1709,101 @@ public class Quidem {
     /** Sets {@link Config#reader}. */
     public ConfigBuilder withReader(Reader reader) {
       return new ConfigBuilder(reader, writer, connectionFactory,
-          propertyHandler, env, stackLimit);
+          commandHandler, propertyHandler, env, stackLimit);
     }
 
     /** Sets {@link Config#writer}. */
     public ConfigBuilder withWriter(Writer writer) {
       return new ConfigBuilder(reader, writer, connectionFactory,
-          propertyHandler, env, stackLimit);
+          commandHandler, propertyHandler, env, stackLimit);
     }
 
     /** Sets {@link Config#propertyHandler}. */
     public ConfigBuilder withPropertyHandler(PropertyHandler propertyHandler) {
       return new ConfigBuilder(reader, writer, connectionFactory,
-          propertyHandler, env, stackLimit);
+          commandHandler, propertyHandler, env, stackLimit);
     }
 
     /** Sets {@link Config#env}. */
     public ConfigBuilder withEnv(Function<String, Object> env) {
       return new ConfigBuilder(reader, writer, connectionFactory,
-          propertyHandler, env, stackLimit);
+          commandHandler, propertyHandler, env, stackLimit);
     }
 
     /** Sets {@link Config#connectionFactory}. */
     public ConfigBuilder withConnectionFactory(
         ConnectionFactory connectionFactory) {
       return new ConfigBuilder(reader, writer, connectionFactory,
-          propertyHandler, env, stackLimit);
+          commandHandler, propertyHandler, env, stackLimit);
+    }
+
+    /** Sets {@link Config#commandHandler}. */
+    public ConfigBuilder withCommandHandler(
+        CommandHandler commandHandler) {
+      return new ConfigBuilder(reader, writer, connectionFactory,
+          commandHandler, propertyHandler, env, stackLimit);
     }
 
     /** Sets {@link Config#stackLimit}. */
     public ConfigBuilder withStackLimit(int stackLimit) {
       return new ConfigBuilder(reader, writer, connectionFactory,
-          propertyHandler, env, stackLimit);
+          commandHandler, propertyHandler, env, stackLimit);
+    }
+  }
+
+  /** Implementation of {@link Command.Context}. Most methods call through to a
+   * corresponding method in {@link Quidem}. */
+  private class ContextImpl implements Command.Context {
+    public PrintWriter writer() {
+      return writer;
+    }
+
+    public Connection connection() {
+      return connection;
+    }
+
+    public Connection refConnection() {
+      return refConnection;
+    }
+
+    public Function<String, Object> env() {
+      return env;
+    }
+
+    public void use(String connectionName) throws Exception {
+      Quidem.this.use(connectionName);
+    }
+
+    public void checkResult(String sql, boolean sort, boolean execute,
+        boolean output, Command.ResultChecker checker) throws Exception {
+      Quidem.this.checkResult(sql, sort, execute, output, checker, this);
+    }
+
+    public void update(String sql, boolean execute, boolean output,
+        Command.ResultChecker checker) throws Exception {
+      Quidem.this.update(sql, execute, output, checker, this);
+    }
+
+    public void echo(List<String> lines) {
+      Quidem.this.echo(lines);
+    }
+
+    public void stack(Throwable e, Writer w) {
+      final int stackLimit = config.stackLimit();
+      if (stackLimit >= 0) {
+        w = new LimitWriter(w, stackLimit);
+      }
+      final PrintWriter pw;
+      if (w instanceof PrintWriter) {
+        pw = (PrintWriter) w;
+      } else {
+        pw = new PrintWriter(w);
+      }
+      e.printStackTrace(pw);
+      if (stackLimit >= 0) {
+        assert w instanceof LimitWriter;
+        ((LimitWriter) w).ellipsis(" (stack truncated)\n");
+      }
     }
   }
 }

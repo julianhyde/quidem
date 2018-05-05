@@ -41,6 +41,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 /**
  * Script-based tests for {@link Quidem}.
@@ -1024,6 +1025,54 @@ public class QuidemTest {
     outFile.delete();
   }
 
+  @Test public void testUnknownCommandFails() {
+    final String in = "!use foo\nvalues 1;\n!ok\n!foo-command args";
+    try {
+      check(in).contains("xx");
+      fail("expected throw");
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Unknown command: foo-command args"));
+    }
+  }
+
+  @Ignore // under dev
+  @Test public void testCustomCommandHandler() {
+    final String in0 = "!use foo\nvalues 1;\n!ok\n!baz-command args";
+    final Quidem.ConfigBuilder configBuilder =
+        Quidem.configBuilder().withCommandHandler(new FooCommandHandler());
+    try {
+      new Fluent(in0, configBuilder)
+          .contains("xx");
+      fail("expected throw");
+    } catch (RuntimeException e) {
+      assertThat(e.getMessage(),
+          is("Unknown command: baz-command args"));
+    }
+
+    final String in = "!use foo\nvalues 1;\n!ok\n!foo-command args";
+    final String out =
+        "java.lang.RuntimeException: Unknown command: foo-command args";
+    new Fluent(in, configBuilder)
+        .contains(out);
+  }
+
+  @Ignore // under dev
+  @Test public void testCustomCommandHandlerMain() throws Exception {
+    final File inFile =
+        writeFile("!use foo\nvalues 1;\n!ok\n!foo-command args");
+    final File outFile = File.createTempFile("outFile", ".iq");
+    checkMain(equalTo(""), 0, "--command-handler",
+        FooCommandHandler.class.getName(), inFile.getAbsolutePath(),
+        outFile.getAbsolutePath());
+    assertThat(toLinux(contents(outFile)),
+        equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
+    //noinspection ResultOfMethodCallIgnored
+    inFile.delete();
+    //noinspection ResultOfMethodCallIgnored
+    outFile.delete();
+  }
+
   @Test public void testVar() throws Exception {
     final File inFile =
         writeFile("!if (myVar) {\nblah;\n!ok\n!}\n");
@@ -1387,6 +1436,20 @@ public class QuidemTest {
     public Connection connect(String name, boolean reference) throws Exception {
       if (name.equals("foo")) {
         return DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA", "");
+      }
+      return null;
+    }
+  }
+
+  /** Implementation of {@link CommandHandler} for test purposes. */
+  public static class FooCommandHandler implements CommandHandler {
+    @Override public Command parseCommand(String line) {
+      if (line.startsWith("foo")) {
+        return new Command() {
+          @Override public void execute(Context x, boolean execute) {
+            System.out.print("xxxxx");
+          }
+        };
       }
       return null;
     }
