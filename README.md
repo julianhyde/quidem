@@ -133,13 +133,15 @@ Arguments
 * `--factory className` - Define a connection factory. The class must
   implement interface
   `net.hydromatic.quidem.Quidem.ConnectionFactory`.
+* `--command-handler className` - Define a command handler. The class
+  must implement interface `net.hydromatic.quidem.CommandHandler`.
 
-For example, the following command line runs Quidem script `script.oq`
+For example, the following command line runs Quidem script `script.iq`
 with database `hr` defined to connect to MySQL,
 and variable `advanced` set to `true`.
 
 ```
-quidem --db hr jdbc:mysql://localhost/hr scott tiger --var advanced true script.oq
+quidem --db hr jdbc:mysql://localhost/hr scott tiger --var advanced true script.iq
 ```
 
 ## Script commands
@@ -313,33 +315,43 @@ or a string (either one word, or a double-quoted string).
 
 Sets the output format (see `!ok`).
 
-Options are `csv`, `mysql`, `psql`:
+Options are `csv`, `mysql`, `oracle`, `psql`:
 
 ```sql
 select * from emp;
 
 !set outputformat csv
-ename,deptno,gender,first_value
-Jane,10,F,Jane
-Bob,10,M,Jane
+ename,deptno,gender
+Jane,10,F
+Bob,10,M
 !ok
 
 !set outputformat mysql
-+-------+--------+--------+-------------+
-| ename | deptno | gender | first_value |
-+-------+--------+--------+-------------+
-| Jane  |     10 | F      | Jane        |
-| Bob   |     10 | M      | Jane        |
-+-------+--------+--------+-------------+
++-------+--------+--------+
+| ename | deptno | gender |
++-------+--------+--------+
+| Jane  |     10 | F      |
+| Bob   |     10 | M      |
++-------+--------+--------+
 (2 rows)
 
 !ok
 
+!set outputformat oracle
+ename deptno gender
+===== ====== ======
+Jane      10 F
+Bob       10 M
+
+2 rows selected.
+
+!ok
+
 !set outputformat psql
- ename | deptno | gender | first_value
--------+--------+--------+-------------
- Jane  |     10 | F      | Jane
- Bob   |     10 | M      | Jane
+ ename | deptno | gender
+-------+--------+--------
+ Jane  |     10 | F
+ Bob   |     10 | M
 (2 rows)
 
 !ok
@@ -412,6 +424,11 @@ select count(*) from scott.emp;
 
 The `!verify` command is a nice alternative to the `!ok` command
 because it reduces the chance of human error checking in the wrong result.
+
+### `!<custom command>`
+
+Runs a custom command recognized by a custom command handler.
+See the `--command-handler` command-line argument.
 
 ## Get Quidem
 

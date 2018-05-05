@@ -28,7 +28,24 @@ import java.util.List;
  * @see AbstractCommand
  * @see CommandHandler
  */
-interface Command {
+public interface Command {
+  /** Returns a string describing this command.
+   *
+   * <p>For example: "OkCommand [sql: select * from emp]"
+   * or "SkipCommand".
+   *
+   * @param x Execution context
+   */
+  String describe(Context x);
+
+  /** Executes this command.
+   *
+   * @param x Execution context
+   * @param execute Whether to execute (false if execution is disabled, say by
+   * an 'if')
+   *
+   * @throws Exception if command fails
+   */
   void execute(Context x, boolean execute) throws Exception;
 
   /** Execution context for a command. */
@@ -43,8 +60,8 @@ interface Command {
 
     void use(String connectionName) throws Exception;
 
-    void checkResult(String sql, boolean sort, boolean execute, boolean output,
-        ResultChecker checker) throws Exception;
+    void checkResult(boolean execute, boolean output, ResultChecker checker)
+        throws Exception;
 
     void update(String sql, boolean execute, boolean output,
         ResultChecker checker) throws Exception;
@@ -52,6 +69,10 @@ interface Command {
     void stack(Throwable resultSetException, Writer writer);
 
     void echo(List<String> lines);
+
+    Quidem.SqlCommand previousSqlCommand();
+
+    boolean execute();
   }
 
   interface ResultChecker {

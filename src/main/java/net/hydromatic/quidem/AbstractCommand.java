@@ -17,7 +17,15 @@
 package net.hydromatic.quidem;
 
 /** Base class for implementations of Command. */
-abstract class AbstractCommand implements Command {
+public abstract class AbstractCommand implements Command {
+  public String describe(Context x) {
+    return commandName();
+  }
+
+  /** Returns the name of the command. Used by {@link #describe}. */
+  protected String commandName() {
+    return getClass().getSimpleName();
+  }
 }
 
 // End AbstractCommand.java

@@ -21,7 +21,6 @@ import com.google.common.base.Function;
 import org.hamcrest.Matcher;
 import org.hamcrest.core.SubstringMatcher;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -35,6 +34,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -620,10 +620,8 @@ public class QuidemTest {
                 + "\n");
   }
 
-  @Ignore // TODO: fixme
   @Test public void testSqlIfFalsePlan() {
-    check(
-        "!use foodmart\n"
+    final String input = "!use scott\n"
         + "values 1;\n"
         + "!if (false) {\n"
         + "anything\n"
@@ -631,19 +629,19 @@ public class QuidemTest {
         + "!ok\n"
         + "!}\n"
         + "something\n"
-        + "!plan\n"
-        + "\n",
-        Quidem.configBuilder(),
-        containsString(
-            "!use foodmart\n"
-                + "!if (true) {\n"
-                + "values (1), (2);\n"
-                + "C1\n"
-                + "1\n"
-                + "2\n"
-                + "!ok\n"
-                + "!}\n"
-                + "\n"));
+        + "!type\n"
+        + "\n";
+    final String expected = "!use scott\n"
+        + "values 1;\n"
+        + "!if (false) {\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "C1 INTEGER(32)\n"
+        + "!type\n"
+        + "\n";
+    check(input).contains(expected);
   }
 
   @Test public void testJustify() {
@@ -931,8 +929,7 @@ public class QuidemTest {
     final String output = "!use empty\n"
         + "select * from (values (1,null),(2,'a')) order by 2;\n"
         + "!verify\n"
-        + "Error while executing command VerifyCommand [sql: select * from (values (1,null),(2,'a')) order by 2\n"
-        + "]\n"
+        + "Error while executing command VerifyCommand [sql: select * from (values (1,null),(2,'a')) order by 2]\n"
         + "java.lang.IllegalArgumentException: Reference query returned different results.\n"
         + "expected:\n"
         + "C1, C2\n"
@@ -954,8 +951,7 @@ public class QuidemTest {
     final String output = "!use scott\n"
         + "select * from scott.emp;\n"
         + "!verify\n"
-        + "Error while executing command VerifyCommand [sql: select * from scott.emp\n"
-        + "]\n"
+        + "Error while executing command VerifyCommand [sql: select * from scott.emp]\n"
         + "java.lang.IllegalArgumentException: no reference connection\n";
     check(input).contains(output);
   }
@@ -1011,6 +1007,36 @@ public class QuidemTest {
         1, "--factory", "java.lang.String");
   }
 
+  @Test public void testHelp() throws Exception {
+    final String in = "!use foo\n"
+        + "values 1;\n"
+        + "!ok\n";
+    final File inFile = writeFile(in);
+    final File outFile = File.createTempFile("outFile", ".iq");
+    final String out = "Usage: quidem argument... inFile outFile\n"
+        + "\n"
+        + "Arguments:\n"
+        + "  --help\n"
+        + "           Print usage\n"
+        + "  --db name url user password\n"
+        + "           Add a database to the connection factory\n"
+        + "  --var name value\n"
+        + "           Assign a value to a variable\n"
+        + "  --factory className\n"
+        + "           Define a connection factory (must implement interface\n"
+        + "        net.hydromatic.quidem.Quidem.ConnectionFactory)\n"
+        + "  --command-handler className\n"
+        + "           Define a command-handler (must implement interface\n"
+        + "        net.hydromatic.quidem.CommandHandler)\n";
+    checkMain(equalTo(out), 0, "--help",
+        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThat(toLinux(contents(outFile)), equalTo(""));
+    //noinspection ResultOfMethodCallIgnored
+    inFile.delete();
+    //noinspection ResultOfMethodCallIgnored
+    outFile.delete();
+  }
+
   @Test public void testFactory() throws Exception {
     final File inFile =
         writeFile("!use foo\nvalues 1;\n!ok\n");
@@ -1036,11 +1062,15 @@ public class QuidemTest {
     }
   }
 
-  @Ignore // under dev
   @Test public void testCustomCommandHandler() {
-    final String in0 = "!use foo\nvalues 1;\n!ok\n!baz-command args";
+    final String in0 = "!use foo\n"
+        + "values 1;\n"
+        + "!ok\n"
+        + "!baz-command args";
     final Quidem.ConfigBuilder configBuilder =
-        Quidem.configBuilder().withCommandHandler(new FooCommandHandler());
+        Quidem.configBuilder()
+            .withConnectionFactory(new FooFactory())
+            .withCommandHandler(new FooCommandHandler());
     try {
       new Fluent(in0, configBuilder)
           .contains("xx");
@@ -1050,23 +1080,43 @@ public class QuidemTest {
           is("Unknown command: baz-command args"));
     }
 
-    final String in = "!use foo\nvalues 1;\n!ok\n!foo-command args";
-    final String out =
-        "java.lang.RuntimeException: Unknown command: foo-command args";
+    final String in = "!use foo\n"
+        + "values 1;\n"
+        + "!ok\n"
+        + "!foo-command args";
+    final String out = "!use foo\n"
+        + "values 1;\n"
+        + "C1\n"
+        + "1\n"
+        + "!ok\n"
+        + "the line: foo-command args\n"
+        + "the command: FooCommand\n"
+        + "previous SQL command: SqlCommand[sql: values 1, sort:true]\n";
     new Fluent(in, configBuilder)
         .contains(out);
   }
 
-  @Ignore // under dev
   @Test public void testCustomCommandHandlerMain() throws Exception {
-    final File inFile =
-        writeFile("!use foo\nvalues 1;\n!ok\n!foo-command args");
+    final String in = "!use foo\n"
+        + "values 1;\n"
+        + "!ok\n"
+        + "!foo-command args\n";
+    final File inFile = writeFile(in);
     final File outFile = File.createTempFile("outFile", ".iq");
-    checkMain(equalTo(""), 0, "--command-handler",
-        FooCommandHandler.class.getName(), inFile.getAbsolutePath(),
-        outFile.getAbsolutePath());
+    checkMain(equalTo(""), 0,
+        "--factory", FooFactory.class.getName(),
+        "--command-handler", FooCommandHandler.class.getName(),
+        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    final String expected = "!use foo\n"
+        + "values 1;\n"
+        + "C1\n"
+        + "1\n"
+        + "!ok\n"
+        + "the line: foo-command args\n"
+        + "the command: FooCommand\n"
+        + "previous SQL command: SqlCommand[sql: values 1, sort:true]\n";
     assertThat(toLinux(contents(outFile)),
-        equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
+        equalTo(expected));
     //noinspection ResultOfMethodCallIgnored
     inFile.delete();
     //noinspection ResultOfMethodCallIgnored
@@ -1084,8 +1134,7 @@ public class QuidemTest {
         startsWith("!if (myVar) {\n"
             + "blah;\n"
             + "!ok\n"
-            + "Error while executing command OkCommand [sql: blah\n"
-            + "]\n"
+            + "Error while executing command OkCommand [sql: blah]\n"
             + "java.lang.RuntimeException: no connection\n"));
     //noinspection ResultOfMethodCallIgnored
     inFile.delete();
@@ -1325,11 +1374,11 @@ public class QuidemTest {
     final PrintWriter pw = new PrintWriter(sw);
     final int code = Launcher.main2(pw, pw, Arrays.asList(args));
     pw.close();
-    assertThat(sw.toString(), matcher);
     assertThat(code, equalTo(expectedCode));
+    assertThat(sw.toString(), matcher);
   }
 
-  static String contents(File file) throws IOException {
+  private static String contents(File file) throws IOException {
     final FileReader reader = new FileReader(file);
     final StringWriter sw = new StringWriter();
     final char[] buf = new char[1024];
@@ -1350,59 +1399,7 @@ public class QuidemTest {
   static void check(String input, Quidem.ConfigBuilder configBuilder,
       Matcher<String> matcher) {
     final StringWriter writer = new StringWriter();
-    final Function<String, Object> env = new Function<String, Object>() {
-      public Object apply(String input) {
-        assert input != null;
-        return input.equals("affirmative") ? Boolean.TRUE
-            : input.equals("negative") ? Boolean.FALSE
-            : input.equals("sun")
-            ? new Function<String, Object>() {
-              public Object apply(String input) {
-                assert input != null;
-                return input.equals("hot") ? Boolean.TRUE
-                    : input.equals("cold") ? Boolean.FALSE
-                    : input.equals("self") ? this
-                    : null;
-              }
-            }
-            : null;
-      }
-    };
-    final Quidem.ConnectionFactory connectionFactory =
-        new Quidem.ConnectionFactory() {
-          public Connection connect(String name, boolean reference)
-              throws Exception {
-            if (name.equals("scott")) {
-              Class.forName("org.hsqldb.jdbcDriver");
-              final Connection connection =
-                  DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA",
-                      "");
-              if (reference) {
-                return null; // no reference connection available for empty
-              }
-              return connection;
-            }
-            if (name.startsWith("empty")) {
-              Class.forName("org.hsqldb.jdbcDriver");
-              if (reference) {
-                name += "_ref";
-              }
-              final Connection connection =
-                  DriverManager.getConnection("jdbc:hsqldb:mem:" + name, "",
-                      "");
-              if (reference) {
-                final Statement statement = connection.createStatement();
-                statement.executeQuery("SET DATABASE SQL NULLS FIRST FALSE");
-                statement.close();
-              }
-              return connection;
-            }
-            throw new RuntimeException("unknown connection '" + name + "'");
-          }
-        };
     final Quidem.Config config = configBuilder
-        .withConnectionFactory(connectionFactory)
-        .withEnv(env)
         .withWriter(writer)
         .withReader(new StringReader(input))
         .build();
@@ -1411,6 +1408,63 @@ public class QuidemTest {
     writer.flush();
     String out = toLinux(writer.toString());
     assertThat(out, matcher);
+  }
+
+  /** Creates a connection factory for use in tests. */
+  private static Quidem.ConnectionFactory dummyConnectionFactory() {
+    return new Quidem.ConnectionFactory() {
+      public Connection connect(String name, boolean reference)
+          throws Exception {
+        if (name.equals("scott")) {
+          Class.forName("org.hsqldb.jdbcDriver");
+          final Connection connection =
+              DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA",
+                  "");
+          if (reference) {
+            return null; // no reference connection available for empty
+          }
+          return connection;
+        }
+        if (name.startsWith("empty")) {
+          Class.forName("org.hsqldb.jdbcDriver");
+          if (reference) {
+            name += "_ref";
+          }
+          final Connection connection =
+              DriverManager.getConnection("jdbc:hsqldb:mem:" + name, "",
+                  "");
+          if (reference) {
+            final Statement statement = connection.createStatement();
+            statement.executeQuery("SET DATABASE SQL NULLS FIRST FALSE");
+            statement.close();
+          }
+          return connection;
+        }
+        throw new RuntimeException("unknown connection '" + name + "'");
+      }
+    };
+  }
+
+  /** Creates an environment for use in tests. */
+  private static Function<String, Object> dummyEnv() {
+    return new Function<String, Object>() {
+        public Object apply(String input) {
+          assert input != null;
+          return input.equals("affirmative") ? Boolean.TRUE
+              : input.equals("negative") ? Boolean.FALSE
+              : input.equals("sun")
+              ? new Function<String, Object>() {
+                public Object apply(String input) {
+                  assert input != null;
+                  return input.equals("hot") ? Boolean.TRUE
+                      : input.equals("cold") ? Boolean.FALSE
+                      : input.equals("self") ? this
+                      : null;
+                }
+              }
+              : null;
+        }
+      };
   }
 
   public static String toLinux(String s) {
@@ -1443,11 +1497,19 @@ public class QuidemTest {
 
   /** Implementation of {@link CommandHandler} for test purposes. */
   public static class FooCommandHandler implements CommandHandler {
-    @Override public Command parseCommand(String line) {
+    @Override public Command parseCommand(List<String> lines,
+        List<String> content, final String line) {
       if (line.startsWith("foo")) {
         return new Command() {
+          @Override public String describe(Context x) {
+            return "FooCommand";
+          }
+
           @Override public void execute(Context x, boolean execute) {
-            System.out.print("xxxxx");
+            x.writer().println("the line: " + line);
+            x.writer().println("the command: " + describe(x));
+            x.writer().println("previous SQL command: "
+                + x.previousSqlCommand().describe(x));
           }
         };
       }
@@ -1462,7 +1524,9 @@ public class QuidemTest {
     private final Quidem.ConfigBuilder configBuilder;
 
     public Fluent(String input) {
-      this(input, Quidem.configBuilder());
+      this(input, Quidem.configBuilder()
+          .withConnectionFactory(dummyConnectionFactory())
+          .withEnv(dummyEnv()));
     }
 
     public Fluent(String input, Quidem.ConfigBuilder configBuilder) {

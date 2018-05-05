@@ -81,7 +81,8 @@ public class Quidem {
   /** A command handler that defines no commands. */
   public static final CommandHandler EMPTY_COMMAND_HANDLER =
       new CommandHandler() {
-        public Command parseCommand(String line) {
+        public Command parseCommand(List<String> lines,
+            List<String> content, String line) {
           return null;
         }
       };
@@ -114,6 +115,7 @@ public class Quidem {
   private boolean execute = true;
   private boolean skip = false;
   private final Function<String, Object> env;
+  private SqlCommand previousSqlCommand;
 
   /** Creates a Quidem interpreter with an empty environment and empty
    * connection factory. */
@@ -314,13 +316,14 @@ public class Quidem {
     echo(lines);
   }
 
-  private void checkResult(String sql, boolean sort, boolean execute,
-      boolean output, Command.ResultChecker checker, Command.Context x)
+  private void checkResult(boolean execute, boolean output,
+      Command.ResultChecker checker, Command.Context x)
       throws Exception {
     if (execute) {
       if (connection == null) {
         throw new RuntimeException("no connection");
       }
+      final SqlCommand sqlCommand = x.previousSqlCommand();
       final Statement statement = connection.createStatement();
       if (resultSet != null) {
         resultSet.close();
@@ -332,7 +335,7 @@ public class Quidem {
           }
           resultSet = null;
           resultSetException = null;
-          resultSet = statement.executeQuery(sql);
+          resultSet = statement.executeQuery(sqlCommand.sql);
         } catch (SQLException e) {
           resultSetException = e;
         } catch (Throwable e) {
@@ -345,7 +348,8 @@ public class Quidem {
           final List<String> headerLines = new ArrayList<String>();
           final List<String> bodyLines = new ArrayList<String>();
           final List<String> footerLines = new ArrayList<String>();
-          format.format(resultSet, headerLines, bodyLines, footerLines, sort);
+          format.format(resultSet, headerLines, bodyLines, footerLines,
+              sqlCommand.sort);
 
           // Construct the original body.
           // Strip the header and footer from the actual output.
@@ -379,7 +383,7 @@ public class Quidem {
           // Print all lines that occurred in the actual output ("bodyLines"),
           // but in their original order ("lines").
           for (String line : lines) {
-            if (sort) {
+            if (sqlCommand.sort) {
               if (bodyLines.remove(line)) {
                 if (output) {
                   writer.println(line);
@@ -610,30 +614,24 @@ public class Quidem {
             return new UseCommand(lines, parts[1]);
           }
           if (line.startsWith("ok")) {
-            SqlCommand command = previousSqlCommand();
-            return new OkCommand(lines, command, content);
+            return new OkCommand(lines, content);
           }
           if (line.startsWith("verify")) {
             // "content" may or may not be empty. We ignore it.
             // This allows people to switch between '!ok' and '!verify'.
-            SqlCommand command = previousSqlCommand();
-            return new VerifyCommand(lines, command);
+            return new VerifyCommand(lines);
           }
           if (line.startsWith("update")) {
-            SqlCommand command = previousSqlCommand();
-            return new UpdateCommand(lines, command, content);
+            return new UpdateCommand(lines, content);
           }
           if (line.startsWith("plan")) {
-            SqlCommand command = previousSqlCommand();
-            return new ExplainCommand(lines, command, content);
+            return new ExplainCommand(lines, content);
           }
           if (line.startsWith("type")) {
-            SqlCommand command = previousSqlCommand();
-            return new TypeCommand(lines, command, content);
+            return new TypeCommand(lines, content);
           }
           if (line.startsWith("error")) {
-            SqlCommand command = previousSqlCommand();
-            return new ErrorCommand(lines, command, content);
+            return new ErrorCommand(lines, content);
           }
           if (line.startsWith("skip")) {
             return new SkipCommand(lines);
@@ -703,7 +701,8 @@ public class Quidem {
           if (line.equals("}")) {
             return null;
           }
-          final Command command = config.commandHandler().parseCommand(line);
+          final Command command =
+              config.commandHandler().parseCommand(lines, content, line);
           if (command != null) {
             return command;
           }
@@ -716,10 +715,11 @@ public class Quidem {
             last = true;
             line = line.substring(0, line.length() - 1);
           }
-          buf.append(line).append("\n");
+          buf.append(line);
           if (last) {
             break;
           }
+          buf.append("\n");
           line = nextLine();
           if (line == null) {
             throw new RuntimeException(
@@ -738,16 +738,6 @@ public class Quidem {
           return new SqlCommand(content, sql, sort);
         }
       }
-    }
-
-    private SqlCommand previousSqlCommand() {
-      for (int i = commands.size() - 1; i >= 0; i--) {
-        Command command = commands.get(i);
-        if (command instanceof SqlCommand) {
-          return (SqlCommand) command;
-        }
-      }
-      throw new AssertionError("no previous SQL command");
     }
 
     private void pushLine() {
@@ -1089,18 +1079,19 @@ public class Quidem {
   /** Command that executes a SQL statement and checks its result. */
   abstract static class CheckResultCommand extends SimpleCommand
       implements Command.ResultChecker {
-    protected final SqlCommand sqlCommand;
     protected final boolean output;
 
-    CheckResultCommand(List<String> lines, SqlCommand sqlCommand,
-        boolean output) {
+    CheckResultCommand(List<String> lines, boolean output) {
       super(lines);
-      this.sqlCommand = sqlCommand;
       this.output = output;
     }
 
+    @Override public String describe(Context x) {
+      return commandName() + " [sql: " + x.previousSqlCommand().sql + "]";
+    }
+
     public void execute(Context x, boolean execute) throws Exception {
-      x.checkResult(sqlCommand.sql, sqlCommand.sort, execute, output, this);
+      x.checkResult(execute, output, this);
       x.echo(lines);
     }
 
@@ -1115,14 +1106,9 @@ public class Quidem {
   static class OkCommand extends CheckResultCommand {
     protected final ImmutableList<String> output;
 
-    OkCommand(List<String> lines,
-        SqlCommand sqlCommand, ImmutableList<String> output) {
-      super(lines, sqlCommand, true);
+    OkCommand(List<String> lines, ImmutableList<String> output) {
+      super(lines, true);
       this.output = output;
-    }
-
-    @Override public String toString() {
-      return "OkCommand [sql: " + sqlCommand.sql + "]";
     }
 
     public List<String> getOutput(Context x) {
@@ -1133,18 +1119,15 @@ public class Quidem {
   /** Command that executes a SQL statement and compares the result with a
    * reference database. */
   static class VerifyCommand extends CheckResultCommand {
-    VerifyCommand(List<String> lines, SqlCommand sqlCommand) {
-      super(lines, sqlCommand, false);
-    }
-
-    @Override public String toString() {
-      return "VerifyCommand [sql: " + sqlCommand.sql + "]";
+    VerifyCommand(List<String> lines) {
+      super(lines, false);
     }
 
     public List<String> getOutput(Context x) throws Exception {
       if (x.refConnection() == null) {
         throw new IllegalArgumentException("no reference connection");
       }
+      final SqlCommand sqlCommand = x.previousSqlCommand();
       final Statement statement = x.refConnection().createStatement();
       final ResultSet resultSet = statement.executeQuery(sqlCommand.sql);
       try {
@@ -1169,21 +1152,19 @@ public class Quidem {
   /** Command that executes a SQL DML command and checks its count. */
   static class UpdateCommand extends SimpleCommand
       implements Command.ResultChecker {
-    private final SqlCommand sqlCommand;
     protected final ImmutableList<String> output;
 
-    UpdateCommand(List<String> lines, SqlCommand sqlCommand,
-        ImmutableList<String> output) {
+    UpdateCommand(List<String> lines, ImmutableList<String> output) {
       super(lines);
-      this.sqlCommand = sqlCommand;
       this.output = output;
     }
 
-    @Override public String toString() {
-      return "UpdateCommand [sql: " + sqlCommand.sql + "]";
+    @Override public String describe(Context x) {
+      return commandName() + "[sql: " + x.previousSqlCommand().sql + "]";
     }
 
     public void execute(Context x, boolean execute) throws Exception {
+      final SqlCommand sqlCommand = x.previousSqlCommand();
       x.update(sqlCommand.sql, execute, true, this);
       x.echo(lines);
     }
@@ -1202,9 +1183,8 @@ public class Quidem {
   /** Command that executes a SQL statement and checks that it throws a given
    * error. */
   static class ErrorCommand extends OkCommand {
-    ErrorCommand(List<String> lines, SqlCommand sqlCommand,
-        ImmutableList<String> output) {
-      super(lines, sqlCommand, output);
+    ErrorCommand(List<String> lines, ImmutableList<String> output) {
+      super(lines, output);
     }
 
     @Override public void checkResultSet(Context x,
@@ -1253,23 +1233,20 @@ public class Quidem {
 
   /** Command that prints the plan for the current query. */
   static class ExplainCommand extends SimpleCommand {
-    private final SqlCommand sqlCommand;
     private final ImmutableList<String> content;
 
-    ExplainCommand(List<String> lines,
-        SqlCommand sqlCommand,
-        ImmutableList<String> content) {
+    ExplainCommand(List<String> lines, ImmutableList<String> content) {
       super(lines);
-      this.sqlCommand = sqlCommand;
       this.content = content;
     }
 
-    @Override public String toString() {
-      return "ExplainCommand [sql: " + sqlCommand.sql + "]";
+    public String describe(Context x) {
+      return commandName() + " [sql: " + x.previousSqlCommand().sql + "]";
     }
 
     public void execute(Context x, boolean execute) throws Exception {
       if (execute) {
+        final SqlCommand sqlCommand = x.previousSqlCommand();
         final Statement statement = x.connection().createStatement();
         try {
           final ResultSet resultSet =
@@ -1303,22 +1280,20 @@ public class Quidem {
 
   /** Command that prints the row type for the current query. */
   static class TypeCommand extends SimpleCommand {
-    private final SqlCommand sqlCommand;
     private final ImmutableList<String> content;
 
-    TypeCommand(List<String> lines, SqlCommand sqlCommand,
-        ImmutableList<String> content) {
+    TypeCommand(List<String> lines, ImmutableList<String> content) {
       super(lines);
-      this.sqlCommand = sqlCommand;
       this.content = content;
     }
 
-    @Override public String toString() {
-      return "TypeCommand [sql: " + sqlCommand.sql + "]";
+    @Override public String describe(Context x) {
+      return commandName() + "[sql: " + x.previousSqlCommand().sql + "]";
     }
 
     public void execute(Context x, boolean execute) throws Exception {
       if (execute) {
+        final SqlCommand sqlCommand = x.previousSqlCommand();
         final PreparedStatement statement =
             x.connection().prepareStatement(sqlCommand.sql);
         try {
@@ -1360,10 +1335,11 @@ public class Quidem {
   }
 
   /** Command that executes a SQL statement. */
-  private static class SqlCommand extends SimpleCommand {
-    private final String sql;
+  public static class SqlCommand extends SimpleCommand {
+    /** The query string. */
+    public final String sql;
     /** Whether to sort result set before printing. */
-    private final boolean sort;
+    public final boolean sort;
 
     protected SqlCommand(List<String> lines, String sql, boolean sort) {
       super(lines);
@@ -1371,7 +1347,14 @@ public class Quidem {
       this.sort = sort;
     }
 
+    public String describe(Context x) {
+      return commandName() + "[sql: " + sql + ", sort:" + sort + "]";
+    }
+
     public void execute(Context x, boolean execute) throws Exception {
+      if (execute) {
+        ((ContextImpl) x).setPreviousSqlCommand(this);
+      }
       x.echo(lines);
     }
   }
@@ -1562,11 +1545,11 @@ public class Quidem {
     }
   }
 
-  /** Command that executes a comment. (Does nothing.) */
-  class CompositeCommand extends AbstractCommand {
+  /** Command that executes a list of commands. */
+  static class CompositeCommand extends AbstractCommand {
     private final List<Command> commands;
 
-    public CompositeCommand(List<Command> commands) {
+    CompositeCommand(List<Command> commands) {
       this.commands = commands;
     }
 
@@ -1578,7 +1561,7 @@ public class Quidem {
         boolean abort = false;
         Throwable e = null;
         try {
-          command.execute(x, execute && Quidem.this.execute);
+          command.execute(x, execute && x.execute());
         } catch (RuntimeException e0) {
           e = e0;
         } catch (Exception e0) {
@@ -1592,8 +1575,9 @@ public class Quidem {
         }
         if (e != null) {
           command.execute(x, false); // echo the command
-          writer.println("Error while executing command " + command);
-          x.stack(e, writer);
+          x.writer().println("Error while executing command "
+              + command.describe(x));
+          x.stack(e, x.writer());
           if (abort) {
             throw (Error) e;
           }
@@ -1774,9 +1758,9 @@ public class Quidem {
       Quidem.this.use(connectionName);
     }
 
-    public void checkResult(String sql, boolean sort, boolean execute,
-        boolean output, Command.ResultChecker checker) throws Exception {
-      Quidem.this.checkResult(sql, sort, execute, output, checker, this);
+    public void checkResult(boolean execute, boolean output,
+        Command.ResultChecker checker) throws Exception {
+      Quidem.this.checkResult(execute, output, checker, this);
     }
 
     public void update(String sql, boolean execute, boolean output,
@@ -1804,6 +1788,21 @@ public class Quidem {
         assert w instanceof LimitWriter;
         ((LimitWriter) w).ellipsis(" (stack truncated)\n");
       }
+    }
+
+    public SqlCommand previousSqlCommand() {
+      if (previousSqlCommand != null) {
+        return previousSqlCommand;
+      }
+      throw new AssertionError("no previous SQL command");
+    }
+
+    public boolean execute() {
+      return Quidem.this.execute;
+    }
+
+    private void setPreviousSqlCommand(SqlCommand sqlCommand) {
+      Quidem.this.previousSqlCommand = sqlCommand;
     }
   }
 }

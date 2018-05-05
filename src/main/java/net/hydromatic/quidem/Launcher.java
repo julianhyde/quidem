@@ -47,7 +47,11 @@ class Launcher {
     "  --var name value",
     "           Assign a value to a variable",
     "  --factory className",
-    "           Define a factory class"
+    "           Define a connection factory (must implement interface",
+    "        " + Quidem.ConnectionFactory.class.getCanonicalName() + ")",
+    "  --command-handler className",
+    "           Define a command-handler (must implement interface",
+    "        " + CommandHandler.class.getCanonicalName() + ")",
   };
 
   private final List<String> args;
@@ -97,6 +101,7 @@ class Launcher {
    */
   public Quidem parse() throws ParseException {
     final List<Quidem.ConnectionFactory> factories = Lists.newArrayList();
+    final List<CommandHandler> commandHandlers = Lists.newArrayList();
     final Map<String, String> envMap = Maps.newLinkedHashMap();
     int i;
     for (i = 0; i < args.size();) {
@@ -152,6 +157,31 @@ class Launcher {
         i += 2;
         continue;
       }
+      if (arg.equals("--command-handler")) {
+        if (i + 1 >= args.size()) {
+          throw error("Insufficient arguments for --command-handler");
+        }
+        final String className = args.get(i + 1);
+        final Class<?> factoryClass;
+        try {
+          factoryClass = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+          throw error("Factory class " + className + " not found");
+        }
+        CommandHandler commandHandler;
+        try {
+          commandHandler = (CommandHandler) factoryClass.newInstance();
+        } catch (InstantiationException e) {
+          throw error("Error instantiating command-handler class " + className);
+        } catch (IllegalAccessException e) {
+          throw error("Error instantiating command-handler class " + className);
+        } catch (ClassCastException e) {
+          throw error("Error instantiating command-handler class " + className);
+        }
+        commandHandlers.add(commandHandler);
+        i += 2;
+        continue;
+      }
       break;
     }
     if (i + 2 > args.size()) {
@@ -175,6 +205,8 @@ class Launcher {
     factories.add(new UnsupportedConnectionFactory());
     final ChainingConnectionFactory connectionFactory =
         new ChainingConnectionFactory(factories);
+    final ChainingCommandHandler commandHandler =
+        new ChainingCommandHandler(commandHandlers);
 
     final Function<String, Object> env = new Function<String, Object>() {
       public Object apply(String input) {
@@ -186,6 +218,7 @@ class Launcher {
         .withWriter(writer)
         .withEnv(env)
         .withConnectionFactory(connectionFactory)
+        .withCommandHandler(commandHandler)
         .build();
     return new Quidem(config);
   }
