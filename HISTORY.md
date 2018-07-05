@@ -2,6 +2,27 @@
 
 For a full list of releases, see <a href="https://github.com/julianhyde/quidem/releases">github</a>.
 
+## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.9">0.9</a> / 2018-07-06
+
+* [<a href="https://github.com/julianhyde/quidem/issues/20">QUIDEM-20</a>]
+  Require Java 8 or higher
+* [<a href="https://github.com/julianhyde/quidem/issues/18">QUIDEM-18</a>]
+  Custom command handler
+* Make `Command` static, abstracting `Quidem` engine via `Command.Context`
+  facade
+* [<a href="https://github.com/julianhyde/quidem/issues/19">QUIDEM-19</a>]
+  Set Quidem parameters via `Config` and `ConfigBuilder`
+* Test using `!ok` to run DML command
+* Require Java 1.7 or higher
+* Use `maven-enforcer-plugin` to check Java and Maven version
+* [<a href="https://github.com/julianhyde/quidem/issues/17">QUIDEM-17</a>]
+  Trim trailing spaces
+* Silence warnings about trusty being deprecated; we need it for JDK9
+* [<a href="https://github.com/julianhyde/quidem/issues/16">QUIDEM-16</a>]
+  Add `oracle` format
+* [<a href="https://github.com/julianhyde/quidem/issues/15">QUIDEM-15</a>]
+  JDK9 support
+
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.8">0.8</a> / 2016-10-27
 
 * Catch exceptions that are not `SQLException` (drivers are not supposed
