@@ -16,10 +16,8 @@
  */
 package net.hydromatic.quidem;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 
 import java.io.BufferedReader;
@@ -46,53 +44,39 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.StringTokenizer;
+import java.util.function.Function;
 
 /**
  * Runs a SQL script.
  */
 public class Quidem {
   private static final Ordering<String[]> ORDERING =
-      Ordering.natural().nullsLast().lexicographical().onResultOf(
-          new Function<String[], Iterable<Comparable>>() {
-            public Iterable<Comparable> apply(String[] input) {
-              return Arrays.<Comparable>asList(input);
-            }
-          });
+      Ordering.natural().nullsLast().lexicographical()
+          .onResultOf(input -> Arrays.asList(input));
 
   public static final boolean DEBUG =
-    "true".equals(System.getProperties().getProperty("quidem.debug"));
+      "true".equals(System.getProperties().getProperty("quidem.debug"));
 
   /** Default value for {@link #setStackLimit(int)}. */
   private static final int DEFAULT_MAX_STACK_LENGTH = 16384;
 
   /** The empty environment. Returns null for all variables. */
   public static final Function<String, Object> EMPTY_ENV =
-      new Function<String, Object>() {
-        public Object apply(String name) {
-          return null;
-        }
-      };
+      name -> null;
 
   /** The empty environment. Returns null for all database names. */
   public static final ConnectionFactory EMPTY_CONNECTION_FACTORY =
-      new ChainingConnectionFactory(ImmutableList.<ConnectionFactory>of());
+      new ChainingConnectionFactory(ImmutableList.of());
 
   /** A command handler that defines no commands. */
   public static final CommandHandler EMPTY_COMMAND_HANDLER =
-      new CommandHandler() {
-        public Command parseCommand(List<String> lines,
-            List<String> content, String line) {
-          return null;
-        }
-      };
+      (lines, content, line) -> null;
 
   /** A property handler that does nothing. */
   public static final PropertyHandler EMPTY_PROPERTY_HANDLER =
-      new PropertyHandler() {
-        public void onSet(String propertyName, Object value) {
-        }
-      };
+      (propertyName, value) -> { };
 
   /** The default value of FEEDBACK in SQL*Plus (the minimum number of rows to
    * print "n rows selected.") is 6. */
@@ -784,7 +768,7 @@ public class Quidem {
         }
         headerLines.add(buf.toString());
         buf.setLength(0);
-        final List<String> lines = Lists.newArrayList();
+        final List<String> lines = new ArrayList<>();
         while (resultSet.next()) {
           for (int i = 0; i < n; i++) {
             if (i > 0) {
@@ -1343,7 +1327,7 @@ public class Quidem {
 
     protected SqlCommand(List<String> lines, String sql, boolean sort) {
       super(lines);
-      this.sql = Preconditions.checkNotNull(sql);
+      this.sql = Objects.requireNonNull(sql);
       this.sort = sort;
     }
 
@@ -1401,8 +1385,8 @@ public class Quidem {
     SetCommand(List<String> lines, Property property, String propertyName,
         Object value) {
       super(lines);
-      this.property = Preconditions.checkNotNull(property);
-      this.propertyName = Preconditions.checkNotNull(propertyName);
+      this.property = Objects.requireNonNull(property);
+      this.propertyName = Objects.requireNonNull(propertyName);
       Preconditions.checkArgument(property == Property.OTHER
           || propertyName.equals(property.propertyName()));
       this.value = value;
@@ -1446,8 +1430,8 @@ public class Quidem {
 
     PopCommand(List<String> lines, Property property, String propertyName) {
       super(lines);
-      this.property = Preconditions.checkNotNull(property);
-      this.propertyName = Preconditions.checkNotNull(propertyName);
+      this.property = Objects.requireNonNull(property);
+      this.propertyName = Objects.requireNonNull(propertyName);
       Preconditions.checkArgument(property == Property.OTHER
           || propertyName.equals(property.propertyName()));
     }
@@ -1473,8 +1457,8 @@ public class Quidem {
     ShowCommand(List<String> lines, Property property,
         String propertyName) {
       super(lines);
-      this.property = Preconditions.checkNotNull(property);
-      this.propertyName = Preconditions.checkNotNull(propertyName);
+      this.property = Objects.requireNonNull(property);
+      this.propertyName = Objects.requireNonNull(propertyName);
       Preconditions.checkArgument(property == Property.OTHER
           || propertyName.equals(property.propertyName()));
     }
@@ -1488,7 +1472,7 @@ public class Quidem {
 
   /** Command that executes a comment. (Does nothing.) */
   class CommentCommand extends SimpleCommand {
-    public CommentCommand(List<String> lines) {
+    CommentCommand(List<String> lines) {
       super(lines);
     }
 
@@ -1504,7 +1488,7 @@ public class Quidem {
     private final Command command;
     private final List<String> variables;
 
-    public IfCommand(List<String> ifLines, List<String> endLines,
+    IfCommand(List<String> ifLines, List<String> endLines,
         Command command, List<String> variables) {
       this.variables = ImmutableList.copyOf(variables);
       this.ifLines = ImmutableList.copyOf(ifLines);
@@ -1532,7 +1516,7 @@ public class Quidem {
   /** Command that switches to a mode where we skip executing the rest of the
    * input. The input is still printed. */
   class SkipCommand extends SimpleCommand {
-    public SkipCommand(List<String> lines) {
+    SkipCommand(List<String> lines) {
       super(lines);
     }
 
@@ -1648,12 +1632,12 @@ public class Quidem {
         ConnectionFactory connectionFactory, CommandHandler commandHandler,
         PropertyHandler propertyHandler, Function<String, Object> env,
         int stackLimit) {
-      this.reader = Preconditions.checkNotNull(reader);
-      this.writer = Preconditions.checkNotNull(writer);
-      this.connectionFactory = Preconditions.checkNotNull(connectionFactory);
+      this.reader = Objects.requireNonNull(reader);
+      this.writer = Objects.requireNonNull(writer);
+      this.connectionFactory = Objects.requireNonNull(connectionFactory);
       this.commandHandler = commandHandler;
-      this.propertyHandler = Preconditions.checkNotNull(propertyHandler);
-      this.env = Preconditions.checkNotNull(env);
+      this.propertyHandler = Objects.requireNonNull(propertyHandler);
+      this.env = Objects.requireNonNull(env);
       this.stackLimit = stackLimit;
     }
 

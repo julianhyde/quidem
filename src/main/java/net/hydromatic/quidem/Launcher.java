@@ -16,10 +16,6 @@
  */
 package net.hydromatic.quidem;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -29,35 +25,38 @@ import java.io.LineNumberReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Parses command-line arguments.
  */
 class Launcher {
   private static final String[] USAGE_LINES = {
-    "Usage: quidem argument... inFile outFile",
-    "",
-    "Arguments:",
-    "  --help",
-    "           Print usage",
-    "  --db name url user password",
-    "           Add a database to the connection factory",
-    "  --var name value",
-    "           Assign a value to a variable",
-    "  --factory className",
-    "           Define a connection factory (must implement interface",
-    "        " + Quidem.ConnectionFactory.class.getCanonicalName() + ")",
-    "  --command-handler className",
-    "           Define a command-handler (must implement interface",
-    "        " + CommandHandler.class.getCanonicalName() + ")",
+      "Usage: quidem argument... inFile outFile",
+      "",
+      "Arguments:",
+      "  --help",
+      "           Print usage",
+      "  --db name url user password",
+      "           Add a database to the connection factory",
+      "  --var name value",
+      "           Assign a value to a variable",
+      "  --factory className",
+      "           Define a connection factory (must implement interface",
+      "        " + Quidem.ConnectionFactory.class.getCanonicalName() + ")",
+      "  --command-handler className",
+      "           Define a command-handler (must implement interface",
+      "        " + CommandHandler.class.getCanonicalName() + ")",
   };
 
   private final List<String> args;
   private final PrintWriter out;
 
-  public Launcher(List<String> args, PrintWriter out) {
+  Launcher(List<String> args, PrintWriter out) {
     this.args = args;
     this.out = out;
   }
@@ -100,9 +99,9 @@ class Launcher {
    * was requested
    */
   public Quidem parse() throws ParseException {
-    final List<Quidem.ConnectionFactory> factories = Lists.newArrayList();
-    final List<CommandHandler> commandHandlers = Lists.newArrayList();
-    final Map<String, String> envMap = Maps.newLinkedHashMap();
+    final List<Quidem.ConnectionFactory> factories = new ArrayList<>();
+    final List<CommandHandler> commandHandlers = new ArrayList<>();
+    final Map<String, String> envMap = new LinkedHashMap<>();
     int i;
     for (i = 0; i < args.size();) {
       String arg = args.get(i);
@@ -208,11 +207,7 @@ class Launcher {
     final ChainingCommandHandler commandHandler =
         new ChainingCommandHandler(commandHandlers);
 
-    final Function<String, Object> env = new Function<String, Object>() {
-      public Object apply(String input) {
-        return envMap.get(input);
-      }
-    };
+    final Function<String, Object> env = envMap::get;
     final Quidem.Config config = Quidem.configBuilder()
         .withReader(reader)
         .withWriter(writer)
@@ -239,7 +234,7 @@ class Launcher {
   static class ParseException extends Exception {
     private final int code;
 
-    public ParseException(int code) {
+    ParseException(int code) {
       super();
       this.code = code;
     }

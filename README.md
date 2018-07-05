@@ -447,7 +447,7 @@ Get Quidem from
 
 ### Download and build
 
-You need Java (1.7 or higher; 9 preferred), git and maven (3.2.1 or higher).
+You need Java (8 or higher; 9 preferred), git and maven (3.2.1 or higher).
 
 ```bash
 $ git clone git://github.com/julianhyde/quidem.git

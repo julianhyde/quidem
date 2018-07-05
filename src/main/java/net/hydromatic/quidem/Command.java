@@ -16,12 +16,11 @@
  */
 package net.hydromatic.quidem;
 
-import com.google.common.base.Function;
-
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.sql.Connection;
 import java.util.List;
+import java.util.function.Function;
 
 /** Command.
  *

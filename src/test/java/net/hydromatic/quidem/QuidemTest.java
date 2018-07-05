@@ -16,8 +16,6 @@
  */
 package net.hydromatic.quidem;
 
-import com.google.common.base.Function;
-
 import org.hamcrest.Matcher;
 import org.hamcrest.core.SubstringMatcher;
 
@@ -35,6 +33,7 @@ import java.sql.DriverManager;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -1309,11 +1308,8 @@ public class QuidemTest {
         + "!show foo\n";
     final StringBuilder b = new StringBuilder();
     final Quidem.PropertyHandler propertyHandler =
-        new Quidem.PropertyHandler() {
-          public void onSet(String propertyName, Object value) {
-            b.append(propertyName).append('=').append(value).append('\n');
-          }
-        };
+        (propertyName, value) -> b.append(propertyName).append('=')
+            .append(value).append('\n');
     check(input).withPropertyHandler(propertyHandler).contains(output);
     final String propertyEvents = "foo=-123\n"
         + "foo=345\n"
@@ -1412,59 +1408,63 @@ public class QuidemTest {
 
   /** Creates a connection factory for use in tests. */
   private static Quidem.ConnectionFactory dummyConnectionFactory() {
-    return new Quidem.ConnectionFactory() {
-      public Connection connect(String name, boolean reference)
-          throws Exception {
-        if (name.equals("scott")) {
-          Class.forName("org.hsqldb.jdbcDriver");
-          final Connection connection =
-              DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA",
-                  "");
-          if (reference) {
-            return null; // no reference connection available for empty
-          }
-          return connection;
+    return (name, reference) -> {
+      if (name.equals("scott")) {
+        Class.forName("org.hsqldb.jdbcDriver");
+        final Connection connection =
+            DriverManager.getConnection("jdbc:hsqldb:res:scott", "SA",
+                "");
+        if (reference) {
+          return null; // no reference connection available for empty
         }
-        if (name.startsWith("empty")) {
-          Class.forName("org.hsqldb.jdbcDriver");
-          if (reference) {
-            name += "_ref";
-          }
-          final Connection connection =
-              DriverManager.getConnection("jdbc:hsqldb:mem:" + name, "",
-                  "");
-          if (reference) {
-            final Statement statement = connection.createStatement();
-            statement.executeQuery("SET DATABASE SQL NULLS FIRST FALSE");
-            statement.close();
-          }
-          return connection;
-        }
-        throw new RuntimeException("unknown connection '" + name + "'");
+        return connection;
       }
+      if (name.startsWith("empty")) {
+        Class.forName("org.hsqldb.jdbcDriver");
+        if (reference) {
+          name += "_ref";
+        }
+        final Connection connection =
+            DriverManager.getConnection("jdbc:hsqldb:mem:" + name, "",
+                "");
+        if (reference) {
+          final Statement statement = connection.createStatement();
+          statement.executeQuery("SET DATABASE SQL NULLS FIRST FALSE");
+          statement.close();
+        }
+        return connection;
+      }
+      throw new RuntimeException("unknown connection '" + name + "'");
     };
   }
 
   /** Creates an environment for use in tests. */
-  private static Function<String, Object> dummyEnv() {
-    return new Function<String, Object>() {
+  private static Object dummyEnv(String input) {
+    assert input != null;
+    switch (input) {
+    case "affirmative":
+      return Boolean.TRUE;
+    case "negative":
+      return Boolean.FALSE;
+    case "sun":
+      return new Function<String, Object>() {
         public Object apply(String input) {
           assert input != null;
-          return input.equals("affirmative") ? Boolean.TRUE
-              : input.equals("negative") ? Boolean.FALSE
-              : input.equals("sun")
-              ? new Function<String, Object>() {
-                public Object apply(String input) {
-                  assert input != null;
-                  return input.equals("hot") ? Boolean.TRUE
-                      : input.equals("cold") ? Boolean.FALSE
-                      : input.equals("self") ? this
-                      : null;
-                }
-              }
-              : null;
+          switch (input) {
+          case "hot":
+            return Boolean.TRUE;
+          case "cold":
+            return Boolean.FALSE;
+          case "self":
+            return this;
+          default:
+            return null;
+          }
         }
       };
+    default:
+      return null;
+    }
   }
 
   public static String toLinux(String s) {
@@ -1523,13 +1523,13 @@ public class QuidemTest {
     private final String input;
     private final Quidem.ConfigBuilder configBuilder;
 
-    public Fluent(String input) {
+    Fluent(String input) {
       this(input, Quidem.configBuilder()
           .withConnectionFactory(dummyConnectionFactory())
-          .withEnv(dummyEnv()));
+          .withEnv((Function<String, Object>) QuidemTest::dummyEnv));
     }
 
-    public Fluent(String input, Quidem.ConfigBuilder configBuilder) {
+    Fluent(String input, Quidem.ConfigBuilder configBuilder) {
       this.input = input;
       this.configBuilder = configBuilder;
     }

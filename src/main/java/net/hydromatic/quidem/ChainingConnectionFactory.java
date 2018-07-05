@@ -26,7 +26,7 @@ import java.util.List;
 class ChainingConnectionFactory implements Quidem.ConnectionFactory {
   private final List<Quidem.ConnectionFactory> factories;
 
-  public ChainingConnectionFactory(List<Quidem.ConnectionFactory> factories) {
+  ChainingConnectionFactory(List<Quidem.ConnectionFactory> factories) {
     this.factories = ImmutableList.copyOf(factories);
   }
 

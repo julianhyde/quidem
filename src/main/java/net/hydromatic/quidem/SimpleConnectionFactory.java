@@ -27,7 +27,7 @@ class SimpleConnectionFactory implements Quidem.ConnectionFactory {
   private final String user;
   private final String password;
 
-  public SimpleConnectionFactory(String name, String url, String user,
+  SimpleConnectionFactory(String name, String url, String user,
       String password) {
     this.name = name;
     this.url = url;

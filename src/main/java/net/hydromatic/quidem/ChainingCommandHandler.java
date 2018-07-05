@@ -25,7 +25,7 @@ import java.util.List;
 class ChainingCommandHandler implements CommandHandler {
   private final List<CommandHandler> handlers;
 
-  public ChainingCommandHandler(List<CommandHandler> handlers) {
+  ChainingCommandHandler(List<CommandHandler> handlers) {
     this.handlers = ImmutableList.copyOf(handlers);
   }
 

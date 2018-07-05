@@ -4,8 +4,8 @@ Here's some miscellaneous documentation about using and developing Quidem.
 
 # Release
 
-Make sure that `mvn clean install site` runs on JDK 1.6, 1.7, 1.8,
-on Linux and Windows.
+Make sure that `mvn clean install site` runs on JDK 8, 9 and 10
+on Linux, macOS and Windows.
 Also check [Travis CI](https://travis-ci.org/julianhyde/quidem).
 
 Update the [release history](HISTORY.md),
