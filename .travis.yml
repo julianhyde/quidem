@@ -3,10 +3,9 @@ language: java
 matrix:
   fast_finish: true
   include:
-    - env: IMAGE=maven:3-jdk-12
-    - env: IMAGE=maven:3-jdk-11 JDOC=Y
+    - env: IMAGE=maven:3-openjdk-16 JDOC=Y
+    - env: IMAGE=maven:3-jdk-11
     - env: IMAGE=maven:3-jdk-10 SITE=Y
-    - env: IMAGE=maven:3-jdk-9
     - env: IMAGE=maven:3-jdk-8 JDOC=Y
 branches:
   only:
@@ -18,6 +17,7 @@ env:
 services:
   - docker
 before_install:
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   - docker pull $IMAGE
 script:
   - if [ $JDOC = "Y" ]; then export JDOC=javadoc:javadoc; fi
