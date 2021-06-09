@@ -1,4 +1,24 @@
-[![Build Status](https://travis-ci.org/julianhyde/quidem.svg?branch=master)](https://travis-ci.org/julianhyde/quidem)
+<!--
+{% comment %}
+Licensed to Julian Hyde under one or more contributor license
+agreements.  See the NOTICE file distributed with this work
+for additional information regarding copyright ownership.
+Julian Hyde licenses this file to you under the Apache
+License, Version 2.0 (the "License"); you may not use this
+file except in compliance with the License.  You may obtain a
+copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+either express or implied.  See the License for the specific
+language governing permissions and limitations under the
+License.
+{% endcomment %}
+-->
+[![Build Status](https://travis-ci.com/julianhyde/quidem.svg?branch=main)](https://travis-ci.com/julianhyde/quidem)
 
 # Quidem
 
@@ -11,7 +31,7 @@ It is a scripting language for testing databases.
 If you are testing a database system, you would traditionally take one
 of two approaches.
 * __Scripting__. Write a SQL script (interpreted by an
-  engine such as <a href="http://github.com/julianhyde/sqlline">sqlline</a>),
+  engine such as <a href="https://github.com/julianhyde/sqlline">sqlline</a>),
   and a reference or 'golden' file containing the expected output.
   Run the SQL script, and compare the output with the golden file.
 * __Procedural__. Write a test program in a language such as Java,
@@ -447,7 +467,7 @@ Get Quidem from
 
 ### Download and build
 
-You need Java (8 or higher; 9 preferred), git and maven (3.2.1 or higher).
+You need Java (8 or higher), Git and Apache Maven (3.2.1 or higher).
 
 ```bash
 $ git clone git://github.com/julianhyde/quidem.git
@@ -459,13 +479,13 @@ $ mvn compile
 
 * License: <a href="LICENSE">Apache Software License, Version 2.0</a>
 * Author: Julian Hyde
-* Blog: http://julianhyde.blogspot.com
+* Blog: https://julianhyde.blogspot.com
 * Project page: http://www.hydromatic.net/quidem
 * API: http://www.hydromatic.net/quidem/apidocs
-* Source code: http://github.com/julianhyde/quidem
+* Source code: https://github.com/julianhyde/quidem
 * Developers list:
   <a href="mailto:dev@calcite.apache.org">dev at calcite.apache.org</a>
-  (<a href="http://mail-archives.apache.org/mod_mbox/calcite-dev/">archive</a>,
+  (<a href="https://mail-archives.apache.org/mod_mbox/calcite-dev/">archive</a>,
   <a href="mailto:dev-subscribe@calcite.apache.org">subscribe</a>)
 * Issues: https://github.com/julianhyde/quidem/issues
 * <a href="HISTORY.md">Release notes and history</a>

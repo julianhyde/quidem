@@ -10,7 +10,7 @@ matrix:
     - env: IMAGE=maven:3-jdk-8 JDOC=Y
 branches:
   only:
-    - master
+    - main
     - scratch
 env:
   global:
