@@ -97,17 +97,6 @@
       <id>central</id>
       <url>https://repo.maven.apache.org/maven2</url>
     </repository>
-    <repository>
-      <releases>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-        <checksumPolicy>warn</checksumPolicy>
-      </releases>
-      <id>conjars</id>
-      <name>Conjars</name>
-      <url>https://conjars.org/repo</url>
-      <layout>default</layout>
-    </repository>
   </repositories>
 
   <dependencies>
