@@ -3,7 +3,7 @@ language: java
 matrix:
   fast_finish: true
   include:
-    - env: IMAGE=maven:3-openjdk-16 JDOC=Y
+    - env: IMAGE=maven:3-openjdk-16 JDOC=Y GUAVA=30.1.1-jre
     - env: IMAGE=maven:3-jdk-11
     - env: IMAGE=maven:3-jdk-10 SITE=Y
     - env: IMAGE=maven:3-jdk-8 JDOC=Y
@@ -20,9 +20,11 @@ before_install:
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   - docker pull $IMAGE
 script:
+  - export FLAGS="-Dcheckstyle.skip -Dsurefire.useFile=false -Dsurefire.threadCount=1 -Dsurefire.perCoreThreadCount=false -Djavax.net.ssl.trustStorePassword=changeit"
+  - if [ "$GUAVA" ]; then export FLAGS="$FLAGS -Dguava.version=$GUAVA"; fi
   - if [ $JDOC = "Y" ]; then export JDOC=javadoc:javadoc; fi
   - if [ $SITE = "Y" ]; then export SITE="site"; fi
-  - $DOCKERRUN $IMAGE mvn -Dcheckstyle.skip -Dsurefire.useFile=false -Dsurefire.threadCount=1 -Dsurefire.perCoreThreadCount=false -Djavax.net.ssl.trustStorePassword=changeit test $JDOC $SITE
+  - $DOCKERRUN $IMAGE mvn $FLAGS test $JDOC $SITE
 cache:
   directories:
     - $HOME/.m2
