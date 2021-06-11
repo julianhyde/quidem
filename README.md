@@ -467,12 +467,12 @@ Get Quidem from
 
 ### Download and build
 
-You need Java (8 or higher), Git and Apache Maven (3.2.1 or higher).
+You need Java (8 or higher) and Git.
 
 ```bash
 $ git clone git://github.com/julianhyde/quidem.git
 $ cd quidem
-$ mvn compile
+$ ./mvnw compile
 ```
 
 ## More information
