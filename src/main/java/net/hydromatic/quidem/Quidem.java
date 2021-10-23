@@ -313,6 +313,9 @@ public class Quidem {
         resultSet.close();
       }
       try {
+        final List<String> headerLines = new ArrayList<String>();
+        final List<String> bodyLines = new ArrayList<String>();
+        final List<String> footerLines = new ArrayList<String>();
         try {
           if (DEBUG) {
             System.out.println("execute: " + this);
@@ -320,21 +323,19 @@ public class Quidem {
           resultSet = null;
           resultSetException = null;
           resultSet = statement.executeQuery(sqlCommand.sql);
+          if (resultSet != null) {
+            final OutputFormat format =
+                (OutputFormat) env.apply(Property.OUTPUTFORMAT.propertyName());
+            format.format(resultSet, headerLines, bodyLines, footerLines,
+                sqlCommand.sort);
+          }
         } catch (SQLException e) {
           resultSetException = e;
         } catch (Throwable e) {
           System.out.println("Warning: JDBC driver threw non-SQLException");
           resultSetException = e;
         }
-        if (resultSet != null) {
-          final OutputFormat format =
-              (OutputFormat) env.apply(Property.OUTPUTFORMAT.propertyName());
-          final List<String> headerLines = new ArrayList<String>();
-          final List<String> bodyLines = new ArrayList<String>();
-          final List<String> footerLines = new ArrayList<String>();
-          format.format(resultSet, headerLines, bodyLines, footerLines,
-              sqlCommand.sort);
-
+        if (resultSetException == null && resultSet != null) {
           // Construct the original body.
           // Strip the header and footer from the actual output.
           // We assume original and actual header have the same line count.
