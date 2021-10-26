@@ -16,9 +16,12 @@
  */
 package net.hydromatic.quidem;
 
-import org.hamcrest.Matcher;
-import org.hamcrest.core.SubstringMatcher;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 
+import org.hamcrest.Matcher;
+
+import org.hamcrest.core.SubstringMatcher;
 import org.junit.Test;
 
 import java.io.File;
@@ -31,12 +34,13 @@ import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.Statement;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
+
+import static net.hydromatic.quidem.QuidemTest.StringMatches.matchesRegex;
 
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -46,104 +50,97 @@ import static org.hamcrest.MatcherAssert.assertThat;
  */
 public class QuidemTest {
   @Test public void testBasic() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "select count(*) as c from scott.emp;\n"
         + "!ok\n"
         + "!set outputformat mysql\n"
         + "select count(*) as c from scott.emp;\n"
         + "!ok\n"
         + "!plan\n"
-        + "\n")
-        .outputs(
-            "!use scott\n"
-                + "select count(*) as c from scott.emp;\n"
-                + "C\n"
-                + "14\n"
-                + "!ok\n"
-                + "!set outputformat mysql\n"
-                + "select count(*) as c from scott.emp;\n"
-                + "+----+\n"
-                + "| C  |\n"
-                + "+----+\n"
-                + "| 14 |\n"
-                + "+----+\n"
-                + "(1 row)\n"
-                + "\n"
-                + "!ok\n"
-                + "isDistinctSelect=[false]\n"
-                + "isGrouped=[false]\n"
-                + "isAggregated=[true]\n"
-                + "columns=[\n"
-                + "  COUNT  arg=[   OpTypes.ASTERISK \n"
-                + " nullable\n"
-                + "\n"
-                + "]\n"
-                + "[range variable 1\n"
-                + "  join type=INNER\n"
-                + "  table=EMP\n"
-                + "  cardinality=14\n"
-                + "  access=FULL SCAN\n"
-                + "  join condition = [index=SYS_IDX_10095\n"
-                + "  ]\n"
-                + "  ]]\n"
-                + "PARAMETERS=[]\n"
-                + "SUBQUERIES[]\n"
-                + "!plan\n"
-                + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "select count(*) as c from scott.emp;\n"
+        + "C\n"
+        + "14\n"
+        + "!ok\n"
+        + "!set outputformat mysql\n"
+        + "select count(*) as c from scott.emp;\n"
+        + "+----+\n"
+        + "| C  |\n"
+        + "+----+\n"
+        + "| 14 |\n"
+        + "+----+\n"
+        + "(1 row)\n"
+        + "\n"
+        + "!ok\n"
+        + "isDistinctSelect=[false]\n"
+        + "isGrouped=[false]\n"
+        + "isAggregated=[true]\n"
+        + "columns=[\n"
+        + "  COUNT  arg=[   OpTypes.ASTERISK \n"
+        + " nullable\n"
+        + "\n"
+        + "]\n"
+        + "[range variable 1\n"
+        + "  join type=INNER\n"
+        + "  table=EMP\n"
+        + "  cardinality=14\n"
+        + "  access=FULL SCAN\n"
+        + "  join condition = [index=SYS_IDX_10095\n"
+        + "  ]\n"
+        + "  ]]\n"
+        + "PARAMETERS=[]\n"
+        + "SUBQUERIES[]\n"
+        + "!plan\n"
+        + "\n";
+    assertThatQuidem(input).output(is(output));
   }
 
   @Test public void testError() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "select blah from blah;\n"
         + "!ok\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-            + "select blah from blah;\n"
-            + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH");
+        + "\n";
+    final String output = "!use scott\n"
+        + "select blah from blah;\n"
+        + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH";
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testErrorTruncated() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "select blah from blah;\n"
         + "!ok\n"
-        + "\n")
-        .limit(10)
-        .contains(
-            "!use scott\n"
-            + "select blah from blah;\n"
-            + "java.sql.S (stack truncated)");
+        + "\n";
+    final String output = "!use scott\n"
+        + "select blah from blah;\n"
+        + "java.sql.S (stack truncated)";
+    assertThatQuidem(input).limit(10).output(containsString(output));
   }
 
   @Test public void testErrorNotTruncated() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "select blah from blah;\n"
         + "!ok\n"
-        + "\n")
-        .limit(1000)
-        .contains(
-            "!use scott\n"
-            + "select blah from blah;\n"
-            + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH");
+        + "\n";
+    final String output = "!use scott\n"
+        + "select blah from blah;\n"
+        + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH";
+    assertThatQuidem(input).limit(1000).output(containsString(output));
   }
 
   @Test public void testExpectError() {
-    check(
-        "!use scott\n"
-            + "select blah from blah;\n"
-            + "user lacks privilege or object not found: BLAH\n"
-            + "!error\n"
-            + "\n")
-        .matches(
-            "(?s)!use scott\n"
-                + "select blah from blah;\n"
-                + "user lacks privilege or object not found: BLAH\n"
-                + "!error\n"
-                + "\n");
+    final String input = "!use scott\n"
+        + "select blah from blah;\n"
+        + "user lacks privilege or object not found: BLAH\n"
+        + "!error\n"
+        + "\n";
+    String output = "(?s)!use scott\n"
+        + "select blah from blah;\n"
+        + "user lacks privilege or object not found: BLAH\n"
+        + "!error\n"
+        + "\n";
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   /** The error does not even need to be a fully line. */
@@ -153,192 +150,186 @@ public class QuidemTest {
         + "lacks privilege\n"
         + "!error\n"
         + "\n";
-    final String expected = "(?s)!use scott\n"
+    final String output = "(?s)!use scott\n"
         + "select blah from blah;\n"
         + "lacks privilege\n"
         + "!error\n"
         + "\n";
-    check(input).matches(expected);
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   @Test public void testExpectErrorNoExpected() {
-    check(
-        "!use scott\n"
-            + "select blah from blah;\n"
-            + "!error\n"
-            + "\n")
-        .matches(
-            "(?s)!use scott\n"
-                + "select blah from blah;\n"
-                + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH\n"
-                + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
-                + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
-                + "\tat org.hsqldb.jdbc.JDBCStatement.fetchResult\\(Unknown Source\\)\n"
-                + ".*"
-                + "!error\n"
-                + "\n");
+    final String input = "!use scott\n"
+        + "select blah from blah;\n"
+        + "!error\n"
+        + "\n";
+    final String output = "(?s)!use scott\n"
+        + "select blah from blah;\n"
+        + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH\n"
+        + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+        + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+        + "\tat org.hsqldb.jdbc.JDBCStatement.fetchResult\\(Unknown Source\\)\n"
+        + ".*"
+        + "!error\n"
+        + "\n";
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   @Test public void testExpectErrorPermissiveTabs() {
     // Quidem matches even though there are differences in tabs, multiple
     // spaces, spaces at the start of lines, and different line endings.
     // Quidem converts line endings to linux.
-    check(
-        "!use scott\n"
-            + "select blah from blah;\n"
-            + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH \n"
-            + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException(Unknown Source)\n"
-            + "  at  org.hsqldb.jdbc.JDBCUtil.sqlException(Unknown Source)\r\n"
-            + "at org.hsqldb.jdbc.JDBCStatement.fetchResult(Unknown Source)  \n"
-            + "!error\n"
-            + "\n")
-        .matches(
-            "(?s)!use scott\n"
-                + "select blah from blah;\n"
-                + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH \n"
-                + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
-                + "  at  org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
-                + "at org.hsqldb.jdbc.JDBCStatement.fetchResult\\(Unknown Source\\)  \n"
-                + "!error\n"
-                + "\n");
+    final String input = "!use scott\n"
+        + "select blah from blah;\n"
+        + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH \n"
+        + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException(Unknown Source)\n"
+        + "  at  org.hsqldb.jdbc.JDBCUtil.sqlException(Unknown Source)\r\n"
+        + "at org.hsqldb.jdbc.JDBCStatement.fetchResult(Unknown Source)  \n"
+        + "!error\n"
+        + "\n";
+    final String output = "(?s)!use scott\n"
+        + "select blah from blah;\n"
+        + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH \n"
+        + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+        + "  at  org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+        + "at org.hsqldb.jdbc.JDBCStatement.fetchResult\\(Unknown Source\\)  \n"
+        + "!error\n"
+        + "\n";
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   @Test public void testExpectErrorDifferent() {
-    check(
-        "!use scott\n"
-            + "select blah from blah;\n"
-            + "user lacks bizz buzz\n"
-            + "!error\n"
-            + "\n")
-        .matches(
-            "(?s)!use scott\n"
-                + "select blah from blah;\n"
-                + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH\n"
-                + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
-                + ".*"
-                + " more\n"
-                + "!error\n"
-                + "\n");
+    final String input = "!use scott\n"
+        + "select blah from blah;\n"
+        + "user lacks bizz buzz\n"
+        + "!error\n"
+        + "\n";
+    final String output = "(?s)!use scott\n"
+        + "select blah from blah;\n"
+        + "java.sql.SQLSyntaxErrorException: user lacks privilege or object not found: BLAH\n"
+        + "\tat org.hsqldb.jdbc.JDBCUtil.sqlException\\(Unknown Source\\)\n"
+        + ".*"
+        + " more\n"
+        + "!error\n"
+        + "\n";
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   @Test public void testPlan() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "values (1), (2);\n"
         + "!plan\n"
-        + "\n")
-        .matches(
-            "(?s)!use scott\n"
-                + "values \\(1\\), \\(2\\);\n"
-                + "isDistinctSelect=.*"
-                + "!plan\n"
-                + "\n");
+        + "\n";
+    final String output = "(?s)!use scott\n"
+        + "values \\(1\\), \\(2\\);\n"
+        + "isDistinctSelect=.*"
+        + "!plan\n"
+        + "\n";
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   @Test public void testPlanAfterOk() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "values (1), (2);\n"
         + "!ok\n"
         + "!plan\n"
-        + "\n")
-        .matches(
-            "(?s)!use scott\n"
-                + "values \\(1\\), \\(2\\);\n"
-                + "C1\n"
-                + "1\n"
-                + "2\n"
-                + "!ok\n"
-                + "isDistinctSelect=.*"
-                + "!plan\n"
-                + "\n");
+        + "\n";
+    final String output = "(?s)!use scott\n"
+        + "values \\(1\\), \\(2\\);\n"
+        + "C1\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "isDistinctSelect=.*"
+        + "!plan\n"
+        + "\n";
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   /** It is OK to have consecutive '!plan' calls and no '!ok'.
    * (Previously there was a "result already open" error.) */
   @Test public void testPlanPlan() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "values (1), (2);\n"
         + "!plan\n"
         + "values (3), (4);\n"
         + "!plan\n"
         + "!ok\n"
-        + "\n")
-        .matches(
-            "(?s)!use scott\n"
-                + "values \\(1\\), \\(2\\);\n"
-                + "isDistinctSelect=.*\n"
-                + "!plan\n"
-                + "values \\(3\\), \\(4\\);\n"
-                + "isDistinctSelect=.*\n"
-                + "!plan\n"
-                + "C1\n"
-                + "3\n"
-                + "4\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output = "(?s)!use scott\n"
+        + "values \\(1\\), \\(2\\);\n"
+        + "isDistinctSelect=.*\n"
+        + "!plan\n"
+        + "values \\(3\\), \\(4\\);\n"
+        + "isDistinctSelect=.*\n"
+        + "!plan\n"
+        + "C1\n"
+        + "3\n"
+        + "4\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   /** Content inside a '!ok' command, that needs to be matched. */
   @Test public void testOkContent() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "values (1), (2);\n"
         + "baz\n"
         + "!ok\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "values (1), (2);\n"
-                + "C1\n"
-                + "1\n"
-                + "2\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "values (1), (2);\n"
+        + "C1\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** If the statement contains 'order by', result is not re-ordered to match
    * the input string. */
   @Test public void testOkOrderBy() {
     // In (2, 1), out (1, 2). Test gives a diff (correctly).
-    check("!use scott\n"
+    final String input = "!use scott\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
         + "C\n"
         + "2\n"
         + "1\n"
         + "!ok\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "select * from (values (1), (2)) as t(c) order by 1;\n"
-                + "C\n"
-                + "1\n"
-                + "2\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "select * from (values (1), (2)) as t(c) order by 1;\n"
+        + "C\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
+
     // In (1, 2), out (1, 2). Test passes.
-    check("!use scott\n"
+    final String input1 = "!use scott\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
         + "C\n"
         + "1\n"
         + "2\n"
         + "!ok\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "select * from (values (1), (2)) as t(c) order by 1;\n"
-                + "C\n"
-                + "1\n"
-                + "2\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output1 = "!use scott\n"
+        + "select * from (values (1), (2)) as t(c) order by 1;\n"
+        + "C\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input1).output(containsString(output1));
   }
 
   /** As {@link #testOkOrderBy()} but for MySQL. */
   @Test public void testOkOrderByMySQL() {
     // In (2, 1), out (1, 2). Test gives a diff (correctly).
-    check("!use scott\n"
+    final String input = "!use scott\n"
         + "!set outputformat mysql\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
         + "+---+\n"
@@ -350,23 +341,24 @@ public class QuidemTest {
         + "(2 rows)\n"
         + "\n"
         + "!ok\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "!set outputformat mysql\n"
-                + "select * from (values (1), (2)) as t(c) order by 1;\n"
-                + "+---+\n"
-                + "| C |\n"
-                + "+---+\n"
-                + "| 1 |\n"
-                + "| 2 |\n"
-                + "+---+\n"
-                + "(2 rows)\n"
-                + "\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "!set outputformat mysql\n"
+        + "select * from (values (1), (2)) as t(c) order by 1;\n"
+        + "+---+\n"
+        + "| C |\n"
+        + "+---+\n"
+        + "| 1 |\n"
+        + "| 2 |\n"
+        + "+---+\n"
+        + "(2 rows)\n"
+        + "\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
+
     // In (1, 2), out (1, 2). Test passes.
-    check("!use scott\n"
+    final String input1 = "!use scott\n"
         + "!set outputformat mysql\n"
         + "select * from (values (1), (2)) as t(c) order by 1;\n"
         + "+---+\n"
@@ -378,21 +370,21 @@ public class QuidemTest {
         + "(2 rows)\n"
         + "\n"
         + "!ok\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "!set outputformat mysql\n"
-                + "select * from (values (1), (2)) as t(c) order by 1;\n"
-                + "+---+\n"
-                + "| C |\n"
-                + "+---+\n"
-                + "| 1 |\n"
-                + "| 2 |\n"
-                + "+---+\n"
-                + "(2 rows)\n"
-                + "\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output1 = "!use scott\n"
+        + "!set outputformat mysql\n"
+        + "select * from (values (1), (2)) as t(c) order by 1;\n"
+        + "+---+\n"
+        + "| C |\n"
+        + "+---+\n"
+        + "| 1 |\n"
+        + "| 2 |\n"
+        + "+---+\n"
+        + "(2 rows)\n"
+        + "\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input1).output(containsString(output1));
   }
 
   /** If the statement does not contain 'order by', result is re-ordered to
@@ -400,111 +392,107 @@ public class QuidemTest {
   @Test public void testOkNoOrderBy() {
     // In (2, 1), out (2, 1). Result would be correct in either order, but
     // we output in the original order, so as not to cause a diff.
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "select * from (values (1), (2)) as t(c);\n"
         + "C\n"
         + "2\n"
         + "1\n"
         + "!ok\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "select * from (values (1), (2)) as t(c);\n"
-                + "C\n"
-                + "2\n"
-                + "1\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "select * from (values (1), (2)) as t(c);\n"
+        + "C\n"
+        + "2\n"
+        + "1\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
+
     // In (1, 2), out (1, 2).
-    check(
-        "!use scott\n"
+    final String input1 = "!use scott\n"
         + "select * from (values (1), (2)) as t(c);\n"
         + "C\n"
         + "1\n"
         + "2\n"
         + "!ok\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "select * from (values (1), (2)) as t(c);\n"
-                + "C\n"
-                + "1\n"
-                + "2\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output1 = "!use scott\n"
+        + "select * from (values (1), (2)) as t(c);\n"
+        + "C\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input1).output(containsString(output1));
   }
 
   /** Content inside a '!plan' command, that needs to be matched. */
   @Test public void testPlanContent() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "values (1), (2);\n"
         + "foo\n"
         + "!plan\n"
         + "baz\n"
         + "!ok\n"
-        + "\n")
-        .matches(
-            "(?s)!use scott\n"
-                + "values \\(1\\), \\(2\\);\n"
-                + "isDistinctSelect=.*\n"
-                + "!plan\n"
-                + "C1\n"
-                + "1\n"
-                + "2\n"
-                + "!ok\n"
-                + "\n");
+        + "\n";
+    final String output = "(?s)!use scott\n"
+        + "values \\(1\\), \\(2\\);\n"
+        + "isDistinctSelect=.*\n"
+        + "!plan\n"
+        + "C1\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input).output(matchesRegex(output));
   }
 
   @Test public void testIfFalse() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "!if (false) {\n"
         + "values (1), (2);\n"
         + "anything\n"
         + "you like\n"
         + "!plan\n"
         + "!}\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "!if (false) {\n"
-                + "values (1), (2);\n"
-                + "anything\n"
-                + "you like\n"
-                + "!plan\n"
-                + "!}\n"
-                + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "!if (false) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!plan\n"
+        + "!}\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testIfTrue() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "!if (true) {\n"
         + "values (1), (2);\n"
         + "anything\n"
         + "you like\n"
         + "!ok\n"
         + "!}\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "!if (true) {\n"
-                + "values (1), (2);\n"
-                + "C1\n"
-                + "1\n"
-                + "2\n"
-                + "!ok\n"
-                + "!}\n"
-                + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "!if (true) {\n"
+        + "values (1), (2);\n"
+        + "C1\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "!}\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** Test case for
    * <a href="https://github.com/julianhyde/quidem/issues/8">[QUIDEM-8]
    * Allow variable in 'if'</a>. */
   @Test public void testIfVariable() {
-    check("!use scott\n"
+    final String input = "!use scott\n"
         + "!if (affirmative) {\n"
         + "values (1), (2);\n"
         + "anything\n"
@@ -523,28 +511,29 @@ public class QuidemTest {
         + "you like\n"
         + "!ok\n"
         + "!}\n"
-        + "\n")
-        .contains("!use scott\n"
-            + "!if (affirmative) {\n"
-            + "values (1), (2);\n"
-            + "C1\n"
-            + "1\n"
-            + "2\n"
-            + "!ok\n"
-            + "!}\n"
-            + "!if (negative) {\n"
-            + "values (1), (2);\n"
-            + "anything\n"
-            + "you like\n"
-            + "!ok\n"
-            + "!}\n"
-            + "!if (unset) {\n"
-            + "values (1), (2);\n"
-            + "anything\n"
-            + "you like\n"
-            + "!ok\n"
-            + "!}\n"
-            + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "!if (affirmative) {\n"
+        + "values (1), (2);\n"
+        + "C1\n"
+        + "1\n"
+        + "2\n"
+        + "!ok\n"
+        + "!}\n"
+        + "!if (negative) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "!if (unset) {\n"
+        + "values (1), (2);\n"
+        + "anything\n"
+        + "you like\n"
+        + "!ok\n"
+        + "!}\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** Test case for
@@ -592,12 +581,11 @@ public class QuidemTest {
         + "!ok\n"
         + "!}\n"
         + "\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testSkip() {
-    check(
-        "!use scott\n"
+    final String input = "!use scott\n"
         + "!skip\n"
         + "values (1);\n"
         + "anything\n"
@@ -605,17 +593,17 @@ public class QuidemTest {
         + "values (1);\n"
         + "you like\n"
         + "!error\n"
-        + "\n")
-        .contains(
-            "!use scott\n"
-                + "!skip\n"
-                + "values (1);\n"
-                + "anything\n"
-                + "!ok\n"
-                + "values (1);\n"
-                + "you like\n"
-                + "!error\n"
-                + "\n");
+        + "\n";
+    final String output = "!use scott\n"
+        + "!skip\n"
+        + "values (1);\n"
+        + "anything\n"
+        + "!ok\n"
+        + "values (1);\n"
+        + "you like\n"
+        + "!error\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testSqlIfFalsePlan() {
@@ -629,7 +617,7 @@ public class QuidemTest {
         + "something\n"
         + "!type\n"
         + "\n";
-    final String expected = "!use scott\n"
+    final String output = "!use scott\n"
         + "values 1;\n"
         + "!if (false) {\n"
         + "anything\n"
@@ -639,63 +627,63 @@ public class QuidemTest {
         + "C1 INTEGER(32)\n"
         + "!type\n"
         + "\n";
-    check(input).contains(expected);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testJustify() {
-    check(
-        "!use scott\n"
-            + "select true as b00000,\n"
-            + "  cast(1 as tinyint) as t000,\n"
-            + "  cast(1 as integer) as i000,\n"
-            + "  cast(1 as float) as f00000,\n"
-            + "  cast(1 as double) as d00000,\n"
-            + "  cast(1 as varchar(3)) as v003\n"
-            + "from (values (1));\n"
-            + "!set outputformat mysql\n"
-            + "!ok\n"
-            + "!set outputformat psql\n"
-            + "!ok\n"
-            + "!set outputformat oracle\n"
-            + "!ok\n"
-            + "!set outputformat csv\n"
-            + "!ok\n"
-            + "\n")
-        .contains("!use scott\n"
-            + "select true as b00000,\n"
-            + "  cast(1 as tinyint) as t000,\n"
-            + "  cast(1 as integer) as i000,\n"
-            + "  cast(1 as float) as f00000,\n"
-            + "  cast(1 as double) as d00000,\n"
-            + "  cast(1 as varchar(3)) as v003\n"
-            + "from (values (1));\n"
-            + "!set outputformat mysql\n"
-            + "+--------+------+------+--------+--------+------+\n"
-            + "| B00000 | T000 | I000 | F00000 | D00000 | V003 |\n"
-            + "+--------+------+------+--------+--------+------+\n"
-            + "| TRUE   |    1 |    1 |  1.0E0 |  1.0E0 | 1    |\n"
-            + "+--------+------+------+--------+--------+------+\n"
-            + "(1 row)\n"
-            + "\n"
-            + "!ok\n"
-            + "!set outputformat psql\n"
-            + " B00000 | T000 | I000 | F00000 | D00000 | V003\n"
-            + "--------+------+------+--------+--------+------\n"
-            + " TRUE   |    1 |    1 |  1.0E0 |  1.0E0 | 1\n"
-            + "(1 row)\n"
-            + "\n"
-            + "!ok\n"
-            + "!set outputformat oracle\n"
-            + "B00000 T000 I000 F00000 D00000 V003\n"
-            + "------ ---- ---- ------ ------ ----\n"
-            + "TRUE      1    1  1.0E0  1.0E0 1\n"
-            + "\n"
-            + "!ok\n"
-            + "!set outputformat csv\n"
-            + "B00000, T000, I000, F00000, D00000, V003\n"
-            + "TRUE, 1, 1, 1.0E0, 1.0E0, 1\n"
-            + "!ok\n"
-            + "\n");
+    final String input = "!use scott\n"
+        + "select true as b00000,\n"
+        + "  cast(1 as tinyint) as t000,\n"
+        + "  cast(1 as integer) as i000,\n"
+        + "  cast(1 as float) as f00000,\n"
+        + "  cast(1 as double) as d00000,\n"
+        + "  cast(1 as varchar(3)) as v003\n"
+        + "from (values (1));\n"
+        + "!set outputformat mysql\n"
+        + "!ok\n"
+        + "!set outputformat psql\n"
+        + "!ok\n"
+        + "!set outputformat oracle\n"
+        + "!ok\n"
+        + "!set outputformat csv\n"
+        + "!ok\n"
+        + "\n";
+    final String output = "!use scott\n"
+        + "select true as b00000,\n"
+        + "  cast(1 as tinyint) as t000,\n"
+        + "  cast(1 as integer) as i000,\n"
+        + "  cast(1 as float) as f00000,\n"
+        + "  cast(1 as double) as d00000,\n"
+        + "  cast(1 as varchar(3)) as v003\n"
+        + "from (values (1));\n"
+        + "!set outputformat mysql\n"
+        + "+--------+------+------+--------+--------+------+\n"
+        + "| B00000 | T000 | I000 | F00000 | D00000 | V003 |\n"
+        + "+--------+------+------+--------+--------+------+\n"
+        + "| TRUE   |    1 |    1 |  1.0E0 |  1.0E0 | 1    |\n"
+        + "+--------+------+------+--------+--------+------+\n"
+        + "(1 row)\n"
+        + "\n"
+        + "!ok\n"
+        + "!set outputformat psql\n"
+        + " B00000 | T000 | I000 | F00000 | D00000 | V003\n"
+        + "--------+------+------+--------+--------+------\n"
+        + " TRUE   |    1 |    1 |  1.0E0 |  1.0E0 | 1\n"
+        + "(1 row)\n"
+        + "\n"
+        + "!ok\n"
+        + "!set outputformat oracle\n"
+        + "B00000 T000 I000 F00000 D00000 V003\n"
+        + "------ ---- ---- ------ ------ ----\n"
+        + "TRUE      1    1  1.0E0  1.0E0 1\n"
+        + "\n"
+        + "!ok\n"
+        + "!set outputformat csv\n"
+        + "B00000, T000, I000, F00000, D00000, V003\n"
+        + "TRUE, 1, 1, 1.0E0, 1.0E0, 1\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testOracle() {
@@ -747,7 +735,7 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testTrimTrailingSpacesOracle() {
@@ -772,7 +760,7 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testTrimTrailingSpacesPsql() {
@@ -796,7 +784,7 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** Test case for
@@ -804,25 +792,25 @@ public class QuidemTest {
    * Trailing spaces in psql output format</a>. */
   @Test public void testColumnHeading() {
     // Note: There must not be trailing spaces after 'DEPTNO | B'
-    check(
-        "!use scott\n"
-            + "!set outputformat psql\n"
-            + "select deptno, deptno > 20 as b from scott.dept order by 1;\n"
-            + "!ok\n"
-            + "\n")
-        .contains("!use scott\n"
-                + "!set outputformat psql\n"
-                + "select deptno, deptno > 20 as b from scott.dept order by 1;\n"
-                + " DEPTNO | B\n"
-                + "--------+-------\n"
-                + "     10 | FALSE\n"
-                + "     20 | FALSE\n"
-                + "     30 | TRUE\n"
-                + "     40 | TRUE\n"
-                + "(4 rows)\n"
-                + "\n"
-                + "!ok\n"
-                + "\n");
+    final String input = "!use scott\n"
+        + "!set outputformat psql\n"
+        + "select deptno, deptno > 20 as b from scott.dept order by 1;\n"
+        + "!ok\n"
+        + "\n";
+    final String output = "!use scott\n"
+        + "!set outputformat psql\n"
+        + "select deptno, deptno > 20 as b from scott.dept order by 1;\n"
+        + " DEPTNO | B\n"
+        + "--------+-------\n"
+        + "     10 | FALSE\n"
+        + "     20 | FALSE\n"
+        + "     30 | TRUE\n"
+        + "     40 | TRUE\n"
+        + "(4 rows)\n"
+        + "\n"
+        + "!ok\n"
+        + "\n";
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** Tests the '!update' command against INSERT and DELETE statements,
@@ -845,7 +833,7 @@ public class QuidemTest {
         + "SUBQUERIES[]]\n"
         + "!plan\n"
         + "\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
 
     // remove the row
     final String input2 = "!use scott\n"
@@ -858,7 +846,7 @@ public class QuidemTest {
         + "\n"
         + "!update\n"
         + "\n";
-    check(input2).contains(output2);
+    assertThatQuidem(input2).output(containsString(output2));
 
     // no row to remove
     final String output3 = "!use scott\n"
@@ -867,7 +855,7 @@ public class QuidemTest {
         + "\n"
         + "!update\n"
         + "\n";
-    check(input2).contains(output3);
+    assertThatQuidem(input2).output(containsString(output3));
 
     // for DML, using '!ok' works, but is not as pretty as '!update'
     final String input4 = "!use scott\n"
@@ -879,7 +867,7 @@ public class QuidemTest {
         + "C1\n"
         + "!ok\n"
         + "\n";
-    check(input4).contains(output4);
+    assertThatQuidem(input4).output(containsString(output4));
   }
 
   /** Tests the '!type' command. */
@@ -899,7 +887,7 @@ public class QuidemTest {
         + "SAL DECIMAL(7, 2)\n"
         + "!type\n"
         + "\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** Tests the '!verify' command. */
@@ -912,7 +900,7 @@ public class QuidemTest {
         + "select * from INFORMATION_SCHEMA.TABLES;\n"
         + "!verify\n"
         + "\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** Tests the '!verify' command where the reference database produces
@@ -937,7 +925,7 @@ public class QuidemTest {
         + "C1, C2\n"
         + "1, null\n"
         + "2, a\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** Tests the '!verify' command with a database that has no reference. */
@@ -951,36 +939,39 @@ public class QuidemTest {
         + "!verify\n"
         + "Error while executing command VerifyCommand [sql: select * from scott.emp]\n"
         + "java.lang.IllegalArgumentException: no reference connection\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testUsage() {
-    final Matcher<String> matcher =
-        startsWith("Usage: quidem argument... inFile outFile");
-    checkMain(matcher, 0, "--help");
+    assertThatMain("--help")
+        .output(startsWith("Usage: quidem argument... inFile outFile"))
+        .code(is(0));
   }
 
   @Test public void testDbBad() {
-    checkMain(startsWith("Insufficient arguments for --db"), 1,
-        "--db", "name", "jdbc:url");
+    assertThatMain("--db", "name", "jdbc:url")
+        .output(startsWith("Insufficient arguments for --db"))
+        .code(is(1));
   }
 
   @Test public void testDb() throws Exception {
     final File inFile =
         writeFile("!use fm\nselect * from scott.dept;\n!ok\n");
     final File outFile = File.createTempFile("outFile", ".iq");
-    final Matcher<String> matcher = equalTo("");
-    checkMain(matcher, 0, "--db", "fm", "jdbc:hsqldb:res:scott", "SA", "",
-        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThatMain("--db", "fm", "jdbc:hsqldb:res:scott", "SA", "",
+        inFile.getAbsolutePath(), outFile.getAbsolutePath())
+        .output(is(""))
+        .code(is(0));
+    final String output = "!use fm\n"
+        + "select * from scott.dept;\n"
+        + "DEPTNO, DNAME, LOC\n"
+        + "10, ACCOUNTING, NEW YORK\n"
+        + "20, RESEARCH, DALLAS\n"
+        + "30, SALES, CHICAGO\n"
+        + "40, OPERATIONS, BOSTON\n"
+        + "!ok\n";
     assertThat(toLinux(contents(outFile)),
-        equalTo("!use fm\n"
-            + "select * from scott.dept;\n"
-            + "DEPTNO, DNAME, LOC\n"
-            + "10, ACCOUNTING, NEW YORK\n"
-            + "20, RESEARCH, DALLAS\n"
-            + "30, SALES, CHICAGO\n"
-            + "40, OPERATIONS, BOSTON\n"
-            + "!ok\n"));
+        is(output));
     //noinspection ResultOfMethodCallIgnored
     inFile.delete();
     //noinspection ResultOfMethodCallIgnored
@@ -996,13 +987,17 @@ public class QuidemTest {
   }
 
   @Test public void testFactoryBad() {
-    checkMain(startsWith("Factory class non.existent.ClassName not found"), 1,
-        "--factory", "non.existent.ClassName");
+    final String output = "Factory class non.existent.ClassName not found";
+    assertThatMain("--factory", "non.existent.ClassName")
+        .output(startsWith(output))
+        .code(is(1));
   }
 
   @Test public void testFactoryBad2() {
-    checkMain(startsWith("Error instantiating factory class java.lang.String"),
-        1, "--factory", "java.lang.String");
+    final String output = "Error instantiating factory class java.lang.String";
+    assertThatMain("--factory", "java.lang.String")
+        .output(startsWith(output))
+        .code(is(1));
   }
 
   @Test public void testHelp() throws Exception {
@@ -1026,9 +1021,11 @@ public class QuidemTest {
         + "  --command-handler className\n"
         + "           Define a command-handler (must implement interface\n"
         + "        net.hydromatic.quidem.CommandHandler)\n";
-    checkMain(equalTo(out), 0, "--help",
-        inFile.getAbsolutePath(), outFile.getAbsolutePath());
-    assertThat(toLinux(contents(outFile)), equalTo(""));
+    assertThatMain("--help", inFile.getAbsolutePath(),
+        outFile.getAbsolutePath())
+        .output(is(out))
+        .code(is(0));
+    assertThat(toLinux(contents(outFile)), is(""));
     //noinspection ResultOfMethodCallIgnored
     inFile.delete();
     //noinspection ResultOfMethodCallIgnored
@@ -1039,10 +1036,12 @@ public class QuidemTest {
     final File inFile =
         writeFile("!use foo\nvalues 1;\n!ok\n");
     final File outFile = File.createTempFile("outFile", ".iq");
-    checkMain(equalTo(""), 0, "--factory", FooFactory.class.getName(),
-        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThatMain("--factory", FooFactory.class.getName(),
+        inFile.getAbsolutePath(), outFile.getAbsolutePath())
+        .output(is(""))
+        .code(is(0));
     assertThat(toLinux(contents(outFile)),
-        equalTo("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
+        is("!use foo\nvalues 1;\nC1\n1\n!ok\n"));
     //noinspection ResultOfMethodCallIgnored
     inFile.delete();
     //noinspection ResultOfMethodCallIgnored
@@ -1052,7 +1051,7 @@ public class QuidemTest {
   @Test public void testUnknownCommandFails() {
     final String in = "!use foo\nvalues 1;\n!ok\n!foo-command args";
     try {
-      check(in).contains("xx");
+      assertThatQuidem(in).output(containsString("xx"));
       throw new AssertionError("expected throw");
     } catch (RuntimeException e) {
       assertThat(e.getMessage(),
@@ -1070,8 +1069,7 @@ public class QuidemTest {
             .withConnectionFactory(new FooFactory())
             .withCommandHandler(new FooCommandHandler());
     try {
-      new Fluent(in0, configBuilder)
-          .contains("xx");
+      new Fluent(in0, configBuilder).output(containsString("xx"));
       throw new AssertionError("expected throw");
     } catch (RuntimeException e) {
       assertThat(e.getMessage(),
@@ -1090,8 +1088,7 @@ public class QuidemTest {
         + "the line: foo-command args\n"
         + "the command: FooCommand\n"
         + "previous SQL command: SqlCommand[sql: values 1, sort:true]\n";
-    new Fluent(in, configBuilder)
-        .contains(out);
+    new Fluent(in, configBuilder).output(containsString(out));
   }
 
   @Test public void testCustomCommandHandlerMain() throws Exception {
@@ -1101,11 +1098,12 @@ public class QuidemTest {
         + "!foo-command args\n";
     final File inFile = writeFile(in);
     final File outFile = File.createTempFile("outFile", ".iq");
-    checkMain(equalTo(""), 0,
-        "--factory", FooFactory.class.getName(),
-        "--command-handler", FooCommandHandler.class.getName(),
-        inFile.getAbsolutePath(), outFile.getAbsolutePath());
-    final String expected = "!use foo\n"
+    assertThatMain("--factory", FooFactory.class.getName(), "--command-handler",
+        FooCommandHandler.class.getName(), inFile.getAbsolutePath(),
+        outFile.getAbsolutePath())
+        .output(is(""))
+        .code(is(0));
+    final String output = "!use foo\n"
         + "values 1;\n"
         + "C1\n"
         + "1\n"
@@ -1113,8 +1111,7 @@ public class QuidemTest {
         + "the line: foo-command args\n"
         + "the command: FooCommand\n"
         + "previous SQL command: SqlCommand[sql: values 1, sort:true]\n";
-    assertThat(toLinux(contents(outFile)),
-        equalTo(expected));
+    assertThat(toLinux(contents(outFile)), is(output));
     //noinspection ResultOfMethodCallIgnored
     inFile.delete();
     //noinspection ResultOfMethodCallIgnored
@@ -1125,9 +1122,10 @@ public class QuidemTest {
     final File inFile =
         writeFile("!if (myVar) {\nblah;\n!ok\n!}\n");
     final File outFile = File.createTempFile("outFile", ".iq");
-    final Matcher<String> matcher = equalTo("");
-    checkMain(matcher, 0, "--var", "myVar", "true",
-        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThatMain("--var", "myVar", "true", inFile.getAbsolutePath(),
+        outFile.getAbsolutePath())
+        .output(is(""))
+        .code(is(0));
     assertThat(toLinux(contents(outFile)),
         startsWith("!if (myVar) {\n"
             + "blah;\n"
@@ -1144,11 +1142,12 @@ public class QuidemTest {
     final File inFile =
         writeFile("!if (myVar) {\nblah;\n!ok\n!}\n");
     final File outFile = File.createTempFile("outFile", ".iq");
-    final Matcher<String> matcher = equalTo("");
-    checkMain(matcher, 0, "--var", "myVar", "false",
-        inFile.getAbsolutePath(), outFile.getAbsolutePath());
+    assertThatMain("--var", "myVar", "false", inFile.getAbsolutePath(),
+        outFile.getAbsolutePath())
+        .output(is(""))
+        .code(is(0));
     assertThat(toLinux(contents(outFile)),
-        equalTo("!if (myVar) {\nblah;\n!ok\n!}\n"));
+        is("!if (myVar) {\nblah;\n!ok\n!}\n"));
     //noinspection ResultOfMethodCallIgnored
     inFile.delete();
     //noinspection ResultOfMethodCallIgnored
@@ -1221,7 +1220,7 @@ public class QuidemTest {
         + "Cannot pop foo: stack is empty\n"
         + "foo null\n"
         + "!show foo\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   @Test public void testSetInteger() {
@@ -1262,7 +1261,7 @@ public class QuidemTest {
         + "!pop foo\n"
         + "foo null\n"
         + "!show foo\n";
-    check(input).contains(output);
+    assertThatQuidem(input).output(containsString(output));
   }
 
   /** Tests that the {@link net.hydromatic.quidem.Quidem.PropertyHandler} is
@@ -1309,7 +1308,9 @@ public class QuidemTest {
     final Quidem.PropertyHandler propertyHandler =
         (propertyName, value) -> b.append(propertyName).append('=')
             .append(value).append('\n');
-    check(input).withPropertyHandler(propertyHandler).contains(output);
+    assertThatQuidem(input)
+        .withPropertyHandler(propertyHandler)
+        .output(containsString(output));
     final String propertyEvents = "foo=-123\n"
         + "foo=345\n"
         + "bar=0\n"
@@ -1324,20 +1325,20 @@ public class QuidemTest {
     final StringWriter w = new StringWriter();
     LimitWriter limitWriter = new LimitWriter(w, 6);
     limitWriter.append("abcdefghiklmnopq");
-    assertThat(w.toString(), equalTo("abcdef"));
+    assertThat(w.toString(), is("abcdef"));
 
     // We already exceeded limit. Clearing the backing buffer does not help.
     w.getBuffer().setLength(0);
     limitWriter.append("xxxxx");
     limitWriter.append("yyyyy");
-    assertThat(w.toString(), equalTo(""));
+    assertThat(w.toString(), is(""));
 
     // Create a new writer to reset the count.
     limitWriter = new LimitWriter(w, 6);
     w.getBuffer().setLength(0);
     limitWriter.append("xxxxx");
     limitWriter.append("yyyyy");
-    assertThat(w.toString(), equalTo("xxxxxy"));
+    assertThat(w.toString(), is("xxxxxy"));
 
     limitWriter = new LimitWriter(w, 6);
     w.getBuffer().setLength(0);
@@ -1352,25 +1353,19 @@ public class QuidemTest {
     limitWriter.append("");
     limitWriter.append('z');
     limitWriter.append("zzzzzzzzz");
-    assertThat(w.toString(), equalTo("xxxyyy"));
+    assertThat(w.toString(), is("xxxyyy"));
 
     limitWriter = new LimitWriter(w, 6);
     w.getBuffer().setLength(1);
-    assertThat(w.toString(), equalTo("x"));
+    assertThat(w.toString(), is("x"));
     w.getBuffer().setLength(2);
-    assertThat(w.toString(), equalTo("x\0"));
+    assertThat(w.toString(), is("x\0"));
     limitWriter.write(new char[]{'a', 'a', 'a', 'a', 'a'}, 0, 3);
-    assertThat(w.toString(), equalTo("x\0aaa"));
+    assertThat(w.toString(), is("x\0aaa"));
   }
 
-  private void checkMain(Matcher<String> matcher, int expectedCode,
-      String... args) {
-    final StringWriter sw = new StringWriter();
-    final PrintWriter pw = new PrintWriter(sw);
-    final int code = Launcher.main2(pw, pw, Arrays.asList(args));
-    pw.close();
-    assertThat(code, equalTo(expectedCode));
-    assertThat(sw.toString(), matcher);
+  static Main assertThatMain(String... args) {
+    return new Main(ImmutableList.copyOf(args));
   }
 
   private static String contents(File file) throws IOException {
@@ -1387,22 +1382,8 @@ public class QuidemTest {
     return sw.toString();
   }
 
-  static Fluent check(String input) {
+  static Fluent assertThatQuidem(String input) {
     return new Fluent(input);
-  }
-
-  static void check(String input, Quidem.ConfigBuilder configBuilder,
-      Matcher<String> matcher) {
-    final StringWriter writer = new StringWriter();
-    final Quidem.Config config = configBuilder
-        .withWriter(writer)
-        .withReader(new StringReader(input))
-        .build();
-    final Quidem run = new Quidem(config);
-    run.execute();
-    writer.flush();
-    String out = toLinux(writer.toString());
-    assertThat(out, matcher);
   }
 
   /** Creates a connection factory for use in tests. */
@@ -1477,6 +1458,11 @@ public class QuidemTest {
       super(pattern);
     }
 
+    /** Returns a Matcher that applies a regular expression. */
+    public static StringMatches matchesRegex(String pattern) {
+      return new StringMatches(pattern);
+    }
+
     @Override protected boolean evalSubstringOf(String s) {
       return s.matches(substring);
     }
@@ -1523,6 +1509,7 @@ public class QuidemTest {
   private static class Fluent {
     private final String input;
     private final Quidem.ConfigBuilder configBuilder;
+    private final Supplier<Run> run = Suppliers.memoize(this::run);
 
     Fluent(String input) {
       this(input, Quidem.configBuilder()
@@ -1535,18 +1522,21 @@ public class QuidemTest {
       this.configBuilder = configBuilder;
     }
 
-    public Fluent contains(String string) {
-      check(input, configBuilder, containsString(string));
-      return this;
+    private Run run() {
+      final StringWriter writer = new StringWriter();
+      final Quidem.Config config = configBuilder
+          .withWriter(writer)
+          .withReader(new StringReader(input))
+          .build();
+      final Quidem run = new Quidem(config);
+      run.execute();
+      writer.flush();
+      String out = toLinux(writer.toString());
+      return new Run(out);
     }
 
-    public Fluent outputs(String string) {
-      check(input, configBuilder, equalTo(string));
-      return this;
-    }
-
-    public Fluent matches(String pattern) {
-      check(input, configBuilder, new StringMatches(pattern));
+    public Fluent output(Matcher<String> matcher) {
+      assertThat(run.get().output, matcher);
       return this;
     }
 
@@ -1558,6 +1548,55 @@ public class QuidemTest {
         final Quidem.PropertyHandler propertyHandler) {
       return new Fluent(input,
           configBuilder.withPropertyHandler(propertyHandler));
+    }
+
+    /** Output of a run of the program. */
+    static class Run {
+      final String output;
+
+      Run(String output) {
+        this.output = output;
+      }
+    }
+  }
+
+  /** Fluent runner that calls {@link Launcher#main2(PrintWriter, PrintWriter, List)}. */
+  @SuppressWarnings("UnusedReturnValue")
+  static class Main {
+    private final ImmutableList<String> argList;
+    private final Supplier<Run> run = Suppliers.memoize(this::run);
+
+    Main(ImmutableList<String> argList) {
+      this.argList = argList;
+    }
+
+    private Run run() {
+      final StringWriter sw = new StringWriter();
+      final PrintWriter pw = new PrintWriter(sw);
+      final int code = Launcher.main2(pw, pw, argList);
+      pw.close();
+      return new Run(code, sw.toString());
+    }
+
+    Main code(Matcher<Integer> matcher) {
+      assertThat(run.get().code, matcher);
+      return this;
+    }
+
+    Main output(Matcher<String> matcher) {
+      assertThat(run.get().output, matcher);
+      return this;
+    }
+
+    /** Output of a run of the program. */
+    static class Run {
+      final int code;
+      final String output;
+
+      Run(int code, String output) {
+        this.code = code;
+        this.output = output;
+      }
     }
   }
 }
