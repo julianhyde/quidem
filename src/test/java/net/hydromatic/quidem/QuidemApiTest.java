@@ -16,7 +16,7 @@
  */
 package net.hydromatic.quidem;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -32,7 +32,7 @@ public class QuidemApiTest {
    * particular for
    * <a href="https://github.com/julianhyde/quidem/issues/7">[QUIDEM-7]
    * Don't be fooled by ORDER BY inside windowed aggregate</a>. */
-  @Test public void testDeterministic() {
+  @Test void testDeterministic() {
     final Quidem run =
         new Quidem(new StringReader(""), new StringWriter());
     assertThat(run.isProbablyDeterministic("select * from emp"), is(false));
