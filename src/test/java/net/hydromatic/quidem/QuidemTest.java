@@ -39,8 +39,7 @@ import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Script-based tests for {@link Quidem}.
@@ -955,13 +954,13 @@ public class QuidemTest {
     check(input).contains(output);
   }
 
-  @Test public void testUsage() throws Exception {
+  @Test public void testUsage() {
     final Matcher<String> matcher =
         startsWith("Usage: quidem argument... inFile outFile");
     checkMain(matcher, 0, "--help");
   }
 
-  @Test public void testDbBad() throws Exception {
+  @Test public void testDbBad() {
     checkMain(startsWith("Insufficient arguments for --db"), 1,
         "--db", "name", "jdbc:url");
   }
@@ -996,12 +995,12 @@ public class QuidemTest {
     return inFile;
   }
 
-  @Test public void testFactoryBad() throws Exception {
+  @Test public void testFactoryBad() {
     checkMain(startsWith("Factory class non.existent.ClassName not found"), 1,
         "--factory", "non.existent.ClassName");
   }
 
-  @Test public void testFactoryBad2() throws Exception {
+  @Test public void testFactoryBad2() {
     checkMain(startsWith("Error instantiating factory class java.lang.String"),
         1, "--factory", "java.lang.String");
   }
@@ -1054,7 +1053,7 @@ public class QuidemTest {
     final String in = "!use foo\nvalues 1;\n!ok\n!foo-command args";
     try {
       check(in).contains("xx");
-      fail("expected throw");
+      throw new AssertionError("expected throw");
     } catch (RuntimeException e) {
       assertThat(e.getMessage(),
           is("Unknown command: foo-command args"));
@@ -1073,7 +1072,7 @@ public class QuidemTest {
     try {
       new Fluent(in0, configBuilder)
           .contains("xx");
-      fail("expected throw");
+      throw new AssertionError("expected throw");
     } catch (RuntimeException e) {
       assertThat(e.getMessage(),
           is("Unknown command: baz-command args"));
@@ -1365,7 +1364,7 @@ public class QuidemTest {
   }
 
   private void checkMain(Matcher<String> matcher, int expectedCode,
-      String... args) throws Exception {
+      String... args) {
     final StringWriter sw = new StringWriter();
     final PrintWriter pw = new PrintWriter(sw);
     final int code = Launcher.main2(pw, pw, Arrays.asList(args));
@@ -1429,6 +1428,7 @@ public class QuidemTest {
                 "");
         if (reference) {
           final Statement statement = connection.createStatement();
+          //noinspection SqlNoDataSourceInspection
           statement.executeQuery("SET DATABASE SQL NULLS FIRST FALSE");
           statement.close();
         }
@@ -1519,6 +1519,7 @@ public class QuidemTest {
 
   /** Fluent class that contains an input string and allows you to test the
    * output in various ways. */
+  @SuppressWarnings("UnusedReturnValue")
   private static class Fluent {
     private final String input;
     private final Quidem.ConfigBuilder configBuilder;
@@ -1526,7 +1527,7 @@ public class QuidemTest {
     Fluent(String input) {
       this(input, Quidem.configBuilder()
           .withConnectionFactory(dummyConnectionFactory())
-          .withEnv((Function<String, Object>) QuidemTest::dummyEnv));
+          .withEnv(QuidemTest::dummyEnv));
     }
 
     Fluent(String input, Quidem.ConfigBuilder configBuilder) {
