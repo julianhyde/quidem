@@ -4,7 +4,7 @@ Here's some miscellaneous documentation about using and developing Quidem.
 
 # Release
 
-Make sure that `mvn clean install site` runs on JDK 8, 9 and 10
+Make sure that `./mvnw clean install site` runs on JDK 8, 11 and 17
 on Linux, macOS and Windows.
 Also check [Travis CI](https://travis-ci.org/julianhyde/quidem).
 
@@ -13,13 +13,13 @@ the version number at the bottom of [README](README.md),
 and the copyright date in [NOTICE](NOTICE).
 
 ```
-mvn clean
-mvn release:clean
+./mvnw clean
+./mvnw release:clean
 git clean -nx
 git clean -fx
 read -s GPG_PASSPHRASE
-mvn -Prelease -Dgpg.passphrase=${GPG_PASSPHRASE} release:prepare
-mvn -Prelease -Dgpg.passphrase=${GPG_PASSPHRASE} release:perform
+./mvnw -Prelease -Dgpg.passphrase=${GPG_PASSPHRASE} release:prepare
+./mvnw -Prelease -Dgpg.passphrase=${GPG_PASSPHRASE} release:perform
 ```
 
 Then go to [Sonatype](https://oss.sonatype.org/#stagingRepositories),

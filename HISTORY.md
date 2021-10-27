@@ -2,6 +2,25 @@
 
 For a full list of releases, see <a href="https://github.com/julianhyde/quidem/releases">github</a>.
 
+## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.10">0.10</a> / 2021-11-06
+
+* Upgrade `maven-javadoc-plugin`
+* [<a href="https://github.com/julianhyde/quidem/issues/23">QUIDEM-23</a>]
+  Catch exceptions that happen during `ResultSet.next()`
+* Run tests in parallel
+* Upgrade Junit (4.11 &rarr; 5.8.1) and Hamcrest (1.3 &rarr; 2.2)
+* Reorganize tests
+* Allow Java 17 and Guava 31.0.1-jre
+* Remove uses of deprecated `org.junit.Assert` methods
+* Travis: quote variables, skip install
+* Maven wrapper
+* Upgrade plugins and dependencies
+* Remove Conjars repository
+* Docker login
+* Rename 'master' branch to 'main'
+* In Travis CI, use docker
+* Add a maven property for the version of each dependency and plugin
+
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.9">0.9</a> / 2018-07-06
 
 * [<a href="https://github.com/julianhyde/quidem/issues/20">QUIDEM-20</a>]
