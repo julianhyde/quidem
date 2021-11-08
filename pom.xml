@@ -281,6 +281,7 @@
       <plugin>
         <groupId>pl.project13.maven</groupId>
         <artifactId>git-commit-id-plugin</artifactId>
+        <version>4.9.10</version>
         <inherited>false</inherited>
         <executions>
           <execution>
@@ -296,6 +297,7 @@
           <generateGitPropertiesFile>true</generateGitPropertiesFile>
           <generateGitPropertiesFilename>target/git.properties</generateGitPropertiesFilename>
           <failOnNoGitDirectory>false</failOnNoGitDirectory>
+          <failOnUnableToExtractRepoInfo>false</failOnUnableToExtractRepoInfo>
           <gitDescribe>
             <skip>false</skip>
             <always>false</always>
