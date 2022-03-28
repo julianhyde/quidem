@@ -20,7 +20,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 
 import org.hamcrest.Matcher;
-
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
