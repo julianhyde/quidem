@@ -18,7 +18,7 @@ language governing permissions and limitations under the
 License.
 {% endcomment %}
 -->
-[![Build Status](https://travis-ci.com/julianhyde/quidem.svg?branch=main)](https://travis-ci.com/julianhyde/quidem)
+[![Build Status](https://github.com/julianhyde/quidem/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/julianhyde/quidem/actions?query=branch%3Amain)
 
 # Quidem
 
