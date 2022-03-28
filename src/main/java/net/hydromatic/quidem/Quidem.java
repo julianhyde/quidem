@@ -17,6 +17,7 @@
 package net.hydromatic.quidem;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 
@@ -476,9 +477,7 @@ public class Quidem {
   private static CharSequence chars(final char c, final int length) {
     return new CharSequence() {
       @Override public String toString() {
-        final char[] chars = new char[length];
-        Arrays.fill(chars, c);
-        return new String(chars);
+        return Strings.repeat("" + c, length);
       }
 
       public int length() {
