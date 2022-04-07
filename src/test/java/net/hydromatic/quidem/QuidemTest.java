@@ -41,6 +41,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.startsWith;
@@ -95,7 +96,8 @@ public class QuidemTest {
         + "SUBQUERIES[]\n"
         + "!plan\n"
         + "\n";
-    assertThatQuidem(input).output(is(output));
+    final String output2 = output.replaceAll("SYS_IDX_10095", "SYS_IDX_10096");
+    assertThatQuidem(input).output(anyOf(is(output), is(output2)));
   }
 
   @Test void testError() {
