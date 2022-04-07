@@ -73,7 +73,7 @@
     <maven-javadoc-plugin.version>3.3.2</maven-javadoc-plugin.version>
     <maven-javadoc-plugin.additionalOptions>-html5</maven-javadoc-plugin.additionalOptions>
     <maven-site-plugin.version>3.11.0</maven-site-plugin.version>
-    <maven-source-plugin.version>2.2.1</maven-source-plugin.version>
+    <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
     <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
   </properties>
 
