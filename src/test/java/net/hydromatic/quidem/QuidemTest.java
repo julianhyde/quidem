@@ -1556,7 +1556,8 @@ public class QuidemTest {
   private static class Fluent {
     private final String input;
     private final Quidem.ConfigBuilder configBuilder;
-    private final Supplier<Run> run = Suppliers.memoize(this::run);
+    @SuppressWarnings("FunctionalExpressionCanBeFolded") // for Guava < 21
+    private final Supplier<Run> run = Suppliers.memoize(this::run)::get;
 
     Fluent(String input) {
       this(input, Quidem.configBuilder()
@@ -1614,7 +1615,8 @@ public class QuidemTest {
   @SuppressWarnings("UnusedReturnValue")
   static class Main {
     private final ImmutableList<String> argList;
-    private final Supplier<Run> run = Suppliers.memoize(this::run);
+    @SuppressWarnings("FunctionalExpressionCanBeFolded") // for Guava < 21
+    private final Supplier<Run> run = Suppliers.memoize(this::run)::get;
 
     Main(ImmutableList<String> argList) {
       this.argList = argList;
