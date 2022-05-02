@@ -475,6 +475,15 @@ $ cd quidem
 $ ./mvnw compile
 ```
 
+On Windows, the last line is
+
+```bash
+> mvnw install
+```
+
+On Java versions less than 11, you should add parameters
+`-Dcheckstyle.version=9.3`.
+
 ## More information
 
 * License: <a href="LICENSE">Apache Software License, Version 2.0</a>
