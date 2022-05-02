@@ -836,32 +836,51 @@ public class QuidemTest {
   /** Tests the '!update' command against INSERT and DELETE statements,
    * and also checks an intervening '!plan'. */
   @Test void testUpdate() {
-    final String input = "!use scott\n"
-        + "insert into scott.dept values (50, 'DEV', 'SAN DIEGO');\n"
+    final String input0 = "!use scott\n"
+        + "create table scott.dept2 (deptno int,"
+        + " dname varchar(10), location varchar(10));\n"
+        + "!update\n"
+        + "insert into scott.dept2 select * from scott.dept;\n"
+        + "!update\n"
+        + "\n";
+    final String output0 = "!use scott\n"
+        + "create table scott.dept2 (deptno int, dname varchar(10), location varchar(10));\n"
+        + "(0 rows modified)\n"
+        + "\n"
+        + "!update\n"
+        + "insert into scott.dept2 select * from scott.dept;\n"
+        + "(4 rows modified)\n"
+        + "\n"
+        + "!update\n"
+        + "\n";
+    assertThatQuidem(input0).output(containsString(output0));
+
+    final String input1 = "!use scott\n"
+        + "insert into scott.dept2 values (50, 'DEV', 'SAN DIEGO');\n"
         + "!update\n"
         + "!plan\n"
         + "\n";
-    final String output = "!use scott\n"
-        + "insert into scott.dept values (50, 'DEV', 'SAN DIEGO');\n"
+    final String output1 = "!use scott\n"
+        + "insert into scott.dept2 values (50, 'DEV', 'SAN DIEGO');\n"
         + "(1 row modified)\n"
         + "\n"
         + "!update\n"
         + "INSERT VALUES[\n"
         + "\n"
-        + "TABLE[DEPT]\n"
+        + "TABLE[DEPT2]\n"
         + "PARAMETERS=[]\n"
         + "SUBQUERIES[]]\n"
         + "!plan\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input1).output(containsString(output1));
 
     // remove the row
     final String input2 = "!use scott\n"
-        + "delete from scott.dept where deptno = 50;\n"
+        + "delete from scott.dept2 where deptno = 50;\n"
         + "!update\n"
         + "\n";
     final String output2 = "!use scott\n"
-        + "delete from scott.dept where deptno = 50;\n"
+        + "delete from scott.dept2 where deptno = 50;\n"
         + "(1 row modified)\n"
         + "\n"
         + "!update\n"
@@ -870,7 +889,7 @@ public class QuidemTest {
 
     // no row to remove
     final String output3 = "!use scott\n"
-        + "delete from scott.dept where deptno = 50;\n"
+        + "delete from scott.dept2 where deptno = 50;\n"
         + "(0 rows modified)\n"
         + "\n"
         + "!update\n"
@@ -879,11 +898,11 @@ public class QuidemTest {
 
     // for DML, using '!ok' works, but is not as pretty as '!update'
     final String input4 = "!use scott\n"
-        + "delete from scott.dept where deptno = 50;\n"
+        + "delete from scott.dept2 where deptno = 50;\n"
         + "!ok\n"
         + "\n";
     final String output4 = "!use scott\n"
-        + "delete from scott.dept where deptno = 50;\n"
+        + "delete from scott.dept2 where deptno = 50;\n"
         + "C1\n"
         + "!ok\n"
         + "\n";
@@ -1558,7 +1577,8 @@ public class QuidemTest {
   private static class Fluent {
     private final String input;
     private final Quidem.ConfigBuilder configBuilder;
-    private final Supplier<Run> run = Suppliers.memoize(this::run);
+    @SuppressWarnings("FunctionalExpressionCanBeFolded") // for Guava < 21
+    private final Supplier<Run> run = Suppliers.memoize(this::run)::get;
 
     Fluent(String input) {
       this(input, Quidem.configBuilder()
@@ -1616,7 +1636,8 @@ public class QuidemTest {
   @SuppressWarnings("UnusedReturnValue")
   static class Main {
     private final ImmutableList<String> argList;
-    private final Supplier<Run> run = Suppliers.memoize(this::run);
+    @SuppressWarnings("FunctionalExpressionCanBeFolded") // for Guava < 21
+    private final Supplier<Run> run = Suppliers.memoize(this::run)::get;
 
     Main(ImmutableList<String> argList) {
       this.argList = argList;

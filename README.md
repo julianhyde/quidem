@@ -472,8 +472,17 @@ You need Java (8 or higher) and Git.
 ```bash
 $ git clone git://github.com/julianhyde/quidem.git
 $ cd quidem
-$ ./mvnw compile
+$ ./mvnw package
 ```
+
+On Windows, the last line is
+
+```bash
+> mvnw package
+```
+
+On Java versions less than 11, you should add parameters
+`-Dcheckstyle.version=9.3 -Dhsqldb.version=2.5.2`.
 
 ## More information
 
