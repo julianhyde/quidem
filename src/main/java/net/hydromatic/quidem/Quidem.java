@@ -458,7 +458,7 @@ public class Quidem {
     return buf.toString();
   }
 
-  <E> Iterator<String> stringIterator(final Enumeration<E> enumeration) {
+  static <E> Iterator<String> stringIterator(final Enumeration<E> enumeration) {
     return new Iterator<String>() {
       public boolean hasNext() {
         return enumeration.hasMoreElements();
@@ -539,7 +539,7 @@ public class Quidem {
    * @param sql SQL query
    * @return Whether the order is likely to be deterministic
    */
-  public boolean isProbablyDeterministic(String sql) {
+  public static boolean isProbablyDeterministic(String sql) {
     final String upperSql = sql.toUpperCase();
     if (!upperSql.contains("ORDER BY")) {
       return false;
