@@ -1,0 +1,48 @@
+# Quidem script that has at least one example of each command
+!use foodmart
+select empno from dept;
+Unknown column 'EMPNO'
+!error
+values 'Hello, world!';
+!ok
+xxx
+bbb
+!plan
+DEPTNO TINYINT(3)
+SAL_10 DECIMAL(19, 2)
+!type
+!if (multi.part.variable) {
+select anotherInvalidColumn
+from anotherInvalidTable;
++---+----+
+| x |  Y |
++---+----+
+| 1 | 23 |
++---+----+
+
+1 row selected.
+!ok
+!}
+!if (false) {
++-----+----------+
+| day | week_day |
++-----+----------+
+|   1 | Sunday   |
+|   2 | Monday   |
++-----+----------+
+(2 rows)
+!ok
+!}
+!set expand false
+!set outputformat csv
+!push outputformat mysql
+!show outputformat
+!pop outputformat
+drop table foo;
+!update
+# The ArrayTable "days" is sorted by "day",
+# so plan must not contain sort
+select *
+from "days"
+order by "day";
+!verify

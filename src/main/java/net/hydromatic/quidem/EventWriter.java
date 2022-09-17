@@ -26,15 +26,26 @@ import java.util.List;
  */
 class EventWriter implements EventHandler {
   private final StringBuilder b;
+  private final String sep;
 
-  EventWriter(StringBuilder b) {
+  EventWriter(StringBuilder b, String sep) {
     this.b = b;
+    this.sep = sep;
+  }
+
+  private void appendAll(Iterable<String> lines) {
+    for (String line : lines) {
+      b.append(line);
+      b.append(sep);
+    }
   }
 
   @Override public void comment(List<String> lines) {
+    appendAll(lines);
   }
 
   @Override public void use(List<String> lines, String part) {
+    b.append("!use ").append(part).append(sep);
   }
 
   @Override public void ok(List<String> lines, List<String> content) {
@@ -86,6 +97,7 @@ class EventWriter implements EventHandler {
   @Override public void command(Command command) {
   }
 
-  @Override public void sort(List<String> content, String sql, boolean sort) {
+  @Override public void sql(List<String> content, String sql, boolean sort) {
+    b.append(sql).append(sep);
   }
 }

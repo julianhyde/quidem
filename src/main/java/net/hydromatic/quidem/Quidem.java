@@ -198,11 +198,13 @@ public class Quidem {
   private void close() throws SQLException {
     if (connection != null) {
       Connection c = connection;
+      c.createStatement().executeUpdate("ROLLBACK");
       connection = null;
       c.close();
     }
     if (refConnection != null) {
       Connection c = refConnection;
+      c.createStatement().executeUpdate("ROLLBACK");
       refConnection = null;
       c.close();
     }

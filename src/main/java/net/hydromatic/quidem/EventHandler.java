@@ -64,5 +64,5 @@ public interface EventHandler {
 
   void command(Command command);
 
-  void sort(List<String> content, String sql, boolean sort);
+  void sql(List<String> content, String sql, boolean sort);
 }

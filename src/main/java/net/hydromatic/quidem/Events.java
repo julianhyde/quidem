@@ -44,14 +44,14 @@ public abstract class Events implements EventHandler {
   /** Parses a document read from a Reader, sending events to the given
    * event handler. */
   public static void parse(EventHandler h, Reader reader) {
-    final Parser parser =
-        new Parser(configBuilder().withReader(reader).build(), h);
+    Quidem.Config config = configBuilder().withReader(reader).build();
+    final Parser parser = Parser.create(config, h);
     parser.parse();
   }
 
   /** Creates an EventHandler that writes to a given StringBuilder. */
-  public static EventHandler write(StringBuilder b) {
-    return new EventWriter(b);
+  public static EventHandler write(StringBuilder b, String sep) {
+    return new EventWriter(b, sep);
   }
 
   /** Parser. */
@@ -64,15 +64,22 @@ public abstract class Events implements EventHandler {
     String pushedLine;
     final StringBuilder buf = new StringBuilder();
 
-    private Parser(Quidem.Config config, EventHandler h) {
+    private Parser(Quidem.Config config, BufferedReader reader,
+        EventHandler h) {
       this.config = config;
-      final Reader rawReader = config.reader();
-      if (rawReader instanceof BufferedReader) {
-        this.reader = (BufferedReader) rawReader;
-      } else {
-        this.reader = new BufferedReader(rawReader);
-      }
+      this.reader = reader;
       this.h = h;
+    }
+
+    static Parser create(Quidem.Config config, EventHandler h) {
+      Reader rawReader = config.reader();
+      BufferedReader reader;
+      if (rawReader instanceof BufferedReader) {
+        reader = (BufferedReader) rawReader;
+      } else {
+        reader = new BufferedReader(rawReader);
+      }
+      return new Parser(config, reader, h);
     }
 
     void parse() {
@@ -204,7 +211,7 @@ public abstract class Events implements EventHandler {
                 ImmutableList.copyOf(
                     stringIterator(new StringTokenizer(variable, ".")));
             final EventHandler h2 = h.ifBegin(ifLines, lines, variables);
-            final Parser p2 = new Parser(config, h2);
+            final Parser p2 = new Parser(config, reader, h2);
             p2.parse();
             h.ifEnd(h2, ifLines, lines, variables);
             return true;
@@ -247,7 +254,7 @@ public abstract class Events implements EventHandler {
         if (last) {
           String sql = buf.toString();
           final boolean sort = !Quidem.isProbablyDeterministic(sql);
-          h.sort(content, sql, sort);
+          h.sql(content, sql, sort);
           return true;
         }
       }

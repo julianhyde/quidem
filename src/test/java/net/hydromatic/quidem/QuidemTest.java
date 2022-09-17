@@ -20,6 +20,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 
 import org.hamcrest.Matcher;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -51,6 +52,7 @@ import static org.hamcrest.core.StringRegularExpression.matchesRegex;
  * Script-based tests for {@link Quidem}.
  */
 public class QuidemTest {
+  @Disabled
   @Test void testBasic() {
     final String input = "!use scott\n"
         + "select count(*) as c from scott.emp;\n"
