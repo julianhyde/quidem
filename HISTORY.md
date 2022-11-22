@@ -2,6 +2,37 @@
 
 For a full list of releases, see <a href="https://github.com/julianhyde/quidem/releases">github</a>.
 
+## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.11">0.11</a> / 2022-11-23
+
+* Remove methods deprecated in
+  [<a href="https://github.com/julianhyde/quidem/issues/19">QUIDEM-19</a>]
+* [<a href="https://github.com/julianhyde/quidem/issues/57">QUIDEM-57</a>]
+  In Oracle mode, Quidem outputs a spurious blank line before
+  'no rows selected'
+* Refactor `enum OutputFormat` into an interface
+* Javadoc: set source version and link URL
+* Add a GitHub workflow to build and test
+* Enable Dependabot
+* [<a href="https://github.com/julianhyde/quidem/issues/25">QUIDEM-25</a>]
+  `git-commit-id-plugin` fails in Travis
+
+Upgrades
+
+* Bump build-helper-maven-plugin from 1.9 to 3.3.0
+* Bump checkstyle from 9.3 to 10.4 (remains 9.3 on JDK 8)
+* Bump guava from 21.0 to 31.1-jre
+* Bump maven-gpg-plugin from 1.5 to 3.0.1
+* Bump hsqldb from 2.4.1 to 2.7.1 (remains 2.4.2 on JDK 8)
+* Bump junit-jupiter.version from 5.8.1 to 5.9.1
+* Bump maven-checkstyle-plugin from 3.0.0 to 3.2.0
+* Bump maven-compiler-plugin from 2.3.2 to 3.10.1
+* Bump maven-enforcer-plugin from 3.0.0-M3 to 3.1.0
+* Bump maven-javadoc-plugin from 3.3.1 to 3.4.1
+* Bump maven-site-plugin from 3.9.1 to 3.12.1
+* Bump maven-source-plugin from 2.2.1 to 3.2.1
+* Bump maven-surefire-plugin from 2.16 to 3.0.0-M7
+* Bump scott-data-hsqldb from 0.1 to 0.2
+
 ## <a href="https://github.com/julianhyde/quidem/releases/tag/quidem-0.10">0.10</a> / 2021-11-06
 
 * Upgrade `maven-javadoc-plugin`
