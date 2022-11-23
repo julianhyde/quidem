@@ -8,7 +8,7 @@
   </parent>
 
   <artifactId>quidem</artifactId>
-  <version>0.11</version>
+  <version>0.12-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <!-- More project information. -->
@@ -100,7 +100,7 @@
     <connection>scm:git:git://github.com/julianhyde/quidem.git</connection>
     <developerConnection>scm:git:git@github.com:julianhyde/quidem.git</developerConnection>
     <url>https://github.com/julianhyde/quidem/tree/main</url>
-    <tag>quidem-0.11</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <repositories>
