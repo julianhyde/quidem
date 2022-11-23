@@ -110,19 +110,6 @@ public class Quidem {
     this(configBuilder().withReader(reader).withWriter(writer).build());
   }
 
-  /** @deprecated Use {@link #Quidem(Config)} and
-   * {@link ConfigBuilder} */
-  @Deprecated // will be removed before 0.10
-  public Quidem(Reader reader, Writer writer, Function<String, Object> env,
-      ConnectionFactory connectionFactory) {
-    this(configBuilder()
-        .withReader(reader)
-        .withWriter(writer)
-        .withConnectionFactory(connectionFactory)
-        .withEnv(env)
-        .build());
-  }
-
   /** Creates a Quidem interpreter. */
   public Quidem(Config config) {
     this.config = config;
@@ -161,22 +148,6 @@ public class Quidem {
         .withCommandHandler(config.commandHandler())
         .withPropertyHandler(config.propertyHandler())
         .withEnv(config.env());
-  }
-
-  /** @deprecated Use
-   * {@link ConfigBuilder#withConnectionFactory(ConnectionFactory)} */
-  @Deprecated // will be removed before 0.10
-  public Quidem withConnectionFactory(ConnectionFactory connectionFactory) {
-    return new Quidem(copyConfigBuilder()
-        .withConnectionFactory(connectionFactory).build());
-  }
-
-  /** @deprecated Use
-   * {@link ConfigBuilder#withPropertyHandler(PropertyHandler)} */
-  @Deprecated // will be removed before 0.10
-  public Quidem withPropertyHandler(PropertyHandler propertyHandler) {
-    return new Quidem(copyConfigBuilder()
-        .withPropertyHandler(propertyHandler).build());
   }
 
   /** Entry point from the operating system command line.
@@ -494,12 +465,6 @@ public class Quidem {
         return Quidem.chars(c, end - start);
       }
     };
-  }
-
-  /** @deprecated Use {@link ConfigBuilder#withStackLimit(int)}. */
-  @Deprecated // will be removed before 0.10
-  public void setStackLimit(int stackLimit) {
-    throw new UnsupportedOperationException("no longer supported");
   }
 
   private boolean getBoolean(List<String> names) {
