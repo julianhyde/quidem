@@ -19,6 +19,7 @@ License.
 {% endcomment %}
 -->
 [![Build Status](https://github.com/julianhyde/quidem/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/julianhyde/quidem/actions?query=branch%3Amain)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.hydromatic/quidem/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.hydromatic/quidem)
 
 # Quidem
 
