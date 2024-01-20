@@ -30,10 +30,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
 
     strategy:
       matrix:
-        java-version: [ "11", "17" ]
+        java-version: [ "11", "17", "21" ]
         javadoc: [ false ]
         site: [ false ]
         checkstyle-version: [ "" ]
@@ -43,7 +44,7 @@ jobs:
             # Checkstyle 10 requires JDK 11 or higher, so downgrade to 9.3;
             # hsqldb 2.6.0 requires JDK 11 or higher, so downgrade to 2.5.2;
             # also test lowest Guava version.
-          - java-version: "8"
+          - java-version: "11"
             checkstyle-version: "9.3"
             guava-version: "19.0"
             hsqldb-version: "2.5.2"
