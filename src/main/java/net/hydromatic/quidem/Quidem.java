@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.StringTokenizer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** Runs a SQL script. */
@@ -1301,6 +1302,21 @@ public class Quidem {
      */
     @Nullable
     Connection connect(String name, boolean reference) throws Exception;
+
+    /**
+     * Returns a supplier of connections to a particular database.
+     *
+     * @param name Database name
+     */
+    default Supplier<Connection> supplier(String name) {
+      return () -> {
+        try {
+          return this.connect(name, false);
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      };
+    }
   }
 
   /** Property whose value may be set. */
@@ -1347,11 +1363,8 @@ public class Quidem {
 
     public void execute(Context x, boolean execute) throws Exception {
       x.echo(lines);
-      List<Object> list = map.get(propertyName);
-      if (list == null) {
-        list = new ArrayList<Object>();
-        map.put(propertyName, list);
-      }
+      final List<Object> list =
+          map.computeIfAbsent(propertyName, k -> new ArrayList<>());
       if (list.isEmpty() || this instanceof PushCommand) {
         list.add(value);
       } else {

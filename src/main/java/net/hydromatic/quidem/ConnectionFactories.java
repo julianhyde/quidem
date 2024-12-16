@@ -17,6 +17,9 @@
 package net.hydromatic.quidem;
 
 import com.google.common.collect.ImmutableList;
+import java.sql.Connection;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /** Utilities for {@link net.hydromatic.quidem.Quidem.ConnectionFactory}. */
 public abstract class ConnectionFactories {
@@ -30,7 +33,23 @@ public abstract class ConnectionFactories {
   /** Creates a connection factory that uses simple JDBC credentials. */
   public static Quidem.ConnectionFactory simple(
       String name, String url, String user, String password) {
-    return new SimpleConnectionFactory(name, url, user, password);
+    return simple(
+        name, url, user, password, connection -> true, connection -> {});
+  }
+
+  /**
+   * Creates a connection factory that uses simple JDBC credentials and
+   * verifies/loads connections.
+   */
+  public static Quidem.ConnectionFactory simple(
+      String name,
+      String url,
+      String user,
+      String password,
+      Predicate<Connection> verifier,
+      Consumer<Connection> loader) {
+    return new SimpleConnectionFactory(
+        name, url, user, password, verifier, loader);
   }
 
   /**
