@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
@@ -1734,7 +1735,8 @@ public class QuidemTest {
   }
 
   public static class FooFactory implements Quidem.ConnectionFactory {
-    public Connection connect(String name, boolean reference) throws Exception {
+    public @Nullable Connection connect(String name, boolean reference)
+        throws Exception {
       if (name.equals("foo")) {
         return makeConnection(false);
       }

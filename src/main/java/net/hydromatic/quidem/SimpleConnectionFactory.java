@@ -18,6 +18,7 @@ package net.hydromatic.quidem;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Connection factory that recognizes a single name, and does not offer a
@@ -38,7 +39,8 @@ class SimpleConnectionFactory implements Quidem.ConnectionFactory {
   }
 
   @Override
-  public Connection connect(String name, boolean reference) throws Exception {
+  public @Nullable Connection connect(String name, boolean reference)
+      throws Exception {
     if (!reference && name.equals(this.name)) {
       return DriverManager.getConnection(url, user, password);
     }

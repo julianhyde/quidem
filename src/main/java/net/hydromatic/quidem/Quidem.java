@@ -60,7 +60,7 @@ public class Quidem {
   public static final boolean DEBUG =
       "true".equals(System.getProperties().getProperty("quidem.debug"));
 
-  /** Default value for {@link #setStackLimit(int)}. */
+  /** Default value for {@link Config#stackLimit()}. */
   private static final int DEFAULT_MAX_STACK_LENGTH = 16384;
 
   /** The empty environment. Returns null for all variables. */
@@ -68,7 +68,7 @@ public class Quidem {
 
   /** The empty environment. Returns null for all database names. */
   public static final ConnectionFactory EMPTY_CONNECTION_FACTORY =
-      new ChainingConnectionFactory(ImmutableList.of());
+      ConnectionFactories.empty();
 
   /** A command handler that defines no commands. */
   public static final CommandHandler EMPTY_COMMAND_HANDLER =
@@ -87,15 +87,14 @@ public class Quidem {
   private final BufferedReader reader;
   private final PrintWriter writer;
   /** Holds a stack of values for each property. */
-  private final Map<String, List<Object>> map =
-      new HashMap<String, List<Object>>();
+  private final Map<String, List<Object>> map = new HashMap<>();
 
   private final Config config;
   /** Result set from SQL statement just executed. */
   private ResultSet resultSet;
 
   private Throwable resultSetException;
-  private final List<String> lines = new ArrayList<String>();
+  private final List<String> lines = new ArrayList<>();
   private String pushedLine;
   private final StringBuilder buf = new StringBuilder();
   private Connection connection;
@@ -128,7 +127,7 @@ public class Quidem {
     } else {
       this.writer = new PrintWriter(rawWriter);
     }
-    final List<Object> list = new ArrayList<Object>();
+    final List<Object> list = new ArrayList<>();
     list.add(BuiltInOutputFormat.CSV);
     this.map.put(Property.OUTPUTFORMAT.propertyName(), list);
     this.env = new TopEnv(config.env());
@@ -203,10 +202,7 @@ public class Quidem {
       try {
         command.execute(new ContextImpl(), execute);
         close();
-      } catch (Exception e) {
-        throw new RuntimeException(
-            "Error while executing command " + command, e);
-      } catch (AssertionError e) {
+      } catch (Exception | AssertionError e) {
         throw new RuntimeException(
             "Error while executing command " + command, e);
       }
@@ -1289,6 +1285,8 @@ public class Quidem {
    * <p>It is kind of a directory service.
    *
    * <p>Caller must close the connection.
+   *
+   * @see ConnectionFactories
    */
   public interface ConnectionFactory {
     /**
@@ -1301,6 +1299,7 @@ public class Quidem {
      * @param reference Whether we require a real connection or a reference
      *     connection
      */
+    @Nullable
     Connection connect(String name, boolean reference) throws Exception;
   }
 

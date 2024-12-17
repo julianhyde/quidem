@@ -17,13 +17,14 @@
 package net.hydromatic.quidem;
 
 import java.sql.Connection;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
  * Connection factory that says all databases are unknown, and returns null when
  * asked for a reference connection.
  */
 class UnsupportedConnectionFactory implements Quidem.ConnectionFactory {
-  public Connection connect(String name, boolean reference) {
+  public @Nullable Connection connect(String name, boolean reference) {
     if (reference) {
       return null;
     }
