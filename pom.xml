@@ -14,7 +14,7 @@
   <!-- More project information. -->
   <name>Quidem</name>
   <description>Idempotent query scripts</description>
-  <url>https://github.com/julianhyde/quidem</url>
+  <url>https://github.com/hydromatic/quidem</url>
   <inceptionYear>2014</inceptionYear>
   <organization>
     <name>Julian Hyde</name>
@@ -93,13 +93,13 @@
 
   <issueManagement>
     <system>github</system>
-    <url>https://github.com/julianhyde/quidem/issues</url>
+    <url>https://github.com/hydromatic/quidem/issues</url>
   </issueManagement>
 
   <scm>
-    <connection>scm:git:git://github.com/julianhyde/quidem.git</connection>
-    <developerConnection>scm:git:git@github.com:julianhyde/quidem.git</developerConnection>
-    <url>https://github.com/julianhyde/quidem/tree/main</url>
+    <connection>scm:git:git://github.com/hydromatic/quidem.git</connection>
+    <developerConnection>scm:git:git@github.com:hydromatic/quidem.git</developerConnection>
+    <url>https://github.com/hydromatic/quidem/tree/main</url>
     <tag>HEAD</tag>
   </scm>
 

@@ -30,7 +30,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class QuidemApiTest {
   /** Unit test for {@link Quidem#isProbablyDeterministic(String)} and in
    * particular for
-   * <a href="https://github.com/julianhyde/quidem/issues/7">[QUIDEM-7]
+   * <a href="https://github.com/hydromatic/quidem/issues/7">[QUIDEM-7]
    * Don't be fooled by ORDER BY inside windowed aggregate</a>. */
   @Test void testDeterministic() {
     final Quidem run =

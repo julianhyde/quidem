@@ -18,7 +18,7 @@ language governing permissions and limitations under the
 License.
 {% endcomment %}
 -->
-[![Build Status](https://github.com/julianhyde/quidem/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/julianhyde/quidem/actions?query=branch%3Amain)
+[![Build Status](https://github.com/hydromatic/quidem/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/hydromatic/quidem/actions?query=branch%3Amain)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/net.hydromatic/quidem/badge.svg)](https://maven-badges.herokuapp.com/maven-central/net.hydromatic/quidem)
 [![javadoc](https://javadoc.io/badge2/net.hydromatic/quidem/javadoc.svg)](https://javadoc.io/doc/net.hydromatic/quidem)
 
@@ -472,7 +472,7 @@ Get Quidem from
 You need Java (8 or higher) and Git.
 
 ```bash
-$ git clone git://github.com/julianhyde/quidem.git
+$ git clone git://github.com/hydromatic/quidem.git
 $ cd quidem
 $ ./mvnw package
 ```
@@ -493,11 +493,11 @@ On Java versions less than 11, you should add parameters
 * Blog: https://julianhyde.blogspot.com
 * Project page: http://www.hydromatic.net/quidem
 * API: http://www.hydromatic.net/quidem/apidocs
-* Source code: https://github.com/julianhyde/quidem
+* Source code: https://github.com/hydromatic/quidem
 * Developers list:
   <a href="mailto:dev@calcite.apache.org">dev at calcite.apache.org</a>
   (<a href="https://mail-archives.apache.org/mod_mbox/calcite-dev/">archive</a>,
   <a href="mailto:dev-subscribe@calcite.apache.org">subscribe</a>)
-* Issues: https://github.com/julianhyde/quidem/issues
+* Issues: https://github.com/hydromatic/quidem/issues
 * <a href="HISTORY.md">Release notes and history</a>
 * <a href="HOWTO.md">HOWTO</a>

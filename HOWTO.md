@@ -53,4 +53,4 @@ log in, close the repository, and release.
 
 Make sure that the [site](http://www.hydromatic.net/quidem/) has been updated.
 
-[Announce the release](https://twitter.com/julianhyde/status/622842100736856064).
+[Announce the release](https://twitter.com/hydromatic/status/622842100736856064).

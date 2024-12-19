@@ -509,7 +509,7 @@ public class QuidemTest {
   }
 
   /** Test case for
-   * <a href="https://github.com/julianhyde/quidem/issues/8">[QUIDEM-8]
+   * <a href="https://github.com/hydromatic/quidem/issues/8">[QUIDEM-8]
    * Allow variable in 'if'</a>. */
   @Test void testIfVariable() {
     final String input = "!use scott\n"
@@ -557,7 +557,7 @@ public class QuidemTest {
   }
 
   /** Test case for
-   * <a href="https://github.com/julianhyde/quidem/issues/11">[QUIDEM-11]
+   * <a href="https://github.com/hydromatic/quidem/issues/11">[QUIDEM-11]
    * Nested variables</a>. */
   @Test void testIfVariableNested() {
     final String input = "!use scott\n"
@@ -811,7 +811,7 @@ public class QuidemTest {
   }
 
   /** Test case for
-   * <a href="https://github.com/julianhyde/quidem/issues/3">[QUIDEM-3]
+   * <a href="https://github.com/hydromatic/quidem/issues/3">[QUIDEM-3]
    * Trailing spaces in psql output format</a>. */
   @Test void testColumnHeading() {
     // Note: There must not be trailing spaces after 'DEPTNO | B'
