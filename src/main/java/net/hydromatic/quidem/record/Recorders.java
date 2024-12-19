@@ -20,6 +20,7 @@ import net.hydromatic.quidem.ConnectionFactories;
 import net.hydromatic.quidem.Quidem;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -127,17 +128,17 @@ public abstract class Recorders {
   /** Recorder in PLAY mode. */
   private static class PlayingRecorder extends RecorderWithFile {
     final SortedMap<String, Section> sectionsByName;
-    final SortedMap<String, Section> sectionsBySql;
+    final ImmutableMap<StringPair, Section> sectionsBySql;
 
     PlayingRecorder(ConfigImpl config) {
       super(config);
       final ImmutableSortedMap.Builder<String, Section> nameBuilder =
           ImmutableSortedMap.naturalOrder();
-      final ImmutableSortedMap.Builder<String, Section> sqlBuilder =
-          ImmutableSortedMap.naturalOrder();
+      final ImmutableMap.Builder<StringPair, Section> sqlBuilder =
+          ImmutableMap.builder();
       populate(file, section -> {
         nameBuilder.put(section.name, section);
-        sqlBuilder.put(section.sql, section);
+        sqlBuilder.put(new StringPair(section.db, section.sql), section);
       });
       sectionsByName = nameBuilder.build();
       sectionsBySql = sqlBuilder.build();
@@ -156,7 +157,7 @@ public abstract class Recorders {
 
     @Override public void executeQuery(String db, String name, String sql,
         Consumer<ResultSet> consumer) {
-      final Section section = sectionsBySql.get(sql);
+      final Section section = sectionsBySql.get(new StringPair(db, sql));
       if (section == null) {
         throw new IllegalArgumentException(
             String.format("sql [%s] is not in recording", sql));
@@ -241,7 +242,6 @@ public abstract class Recorders {
   private static class SectionBuilder {
     int offset; // offset within file
     int sectionStart;
-    int queryStart = -1; // offset of start of query
     String name;
     String db;
     String sql;
@@ -253,7 +253,7 @@ public abstract class Recorders {
 
     private void clear() {
       name = db = sql = result = null;
-      queryStart = sectionStart = -1;
+      sectionStart = -1;
     }
 
     void end(Consumer<Section> consumer) {
@@ -301,7 +301,10 @@ public abstract class Recorders {
             end(consumer);
           }
           name = line.substring("# StartTest: ".length()).trim();
-          queryStart = offset;
+          continue;
+        }
+        if (line.startsWith("!use ")) {
+          db = line.substring("!use ".length()).trim();
           continue;
         }
         if (line.endsWith(";")) {
@@ -345,25 +348,15 @@ public abstract class Recorders {
       this.result = result;
     }
 
-    void foo(StringBuilder b) {
+    public void send(PrintWriter pw) {
       // Generate the string fragment representing the test header,
       // SQL query, result set, and test footer.
-      b.append("# StartTest: ")
-          .append(name)
-          .append("\n");
-      b.append(sql)
-          .append(";\n");
-      b.append(result);
-      b.append("!ok\n");
-      b.append("# EndTest: ")
-          .append(name)
-          .append("\n");
-    }
-
-    public void send(PrintWriter pw) {
-      final StringBuilder b = new StringBuilder();
-      foo(b);
-      pw.print(b);
+      pw.print("# StartTest: " + name + "\n"
+          + "!use " + db + "\n"
+          + sql + ";\n"
+          + result
+          + "!ok\n"
+          + "# EndTest: " + name + "\n");
     }
 
     public void toResultSet(Consumer<ResultSet> consumer) {
@@ -372,6 +365,32 @@ public abstract class Recorders {
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
+    }
+  }
+
+  /** Immutable pair of non-null strings. */
+  static class StringPair {
+    final String left;
+    final String right;
+
+    StringPair(String left, String right) {
+      this.left = left;
+      this.right = right;
+    }
+
+    @Override public String toString() {
+      return left + ":" + right;
+    }
+
+    @Override public int hashCode() {
+      return left.hashCode() * 37 + right.hashCode();
+    }
+
+    @Override public boolean equals(Object obj) {
+      return obj == this
+          || obj instanceof StringPair
+          && left.equals(((StringPair) obj).left)
+          && right.equals(((StringPair) obj).right);
     }
   }
 }
