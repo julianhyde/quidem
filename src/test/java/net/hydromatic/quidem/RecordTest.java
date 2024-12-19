@@ -66,11 +66,12 @@ public class RecordTest {
 
   /** Records a file containing one query. */
   @Test void testRecord() {
-    final File file = TEMP_SUPPLIER.get().file("foo", ".iq");
+    final File file = TEMP_SUPPLIER.get().file("testRecord", ".iq");
     checkRecord(file, Mode.RECORD, getScottHsqldb());
 
     final String[] lines = {
         "# StartTest: empCount",
+        "!use scott",
         "select count(*) from emp;",
         "C1:BIGINT",
         "14",
@@ -81,17 +82,19 @@ public class RecordTest {
   }
 
   @Test void testRecordSeveral() {
-    final File file = TEMP_SUPPLIER.get().file("foo2", ".iq");
+    final File file = TEMP_SUPPLIER.get().file("testRecordSeveral", ".iq");
     final Quidem.ConnectionFactory connectionFactory =
         ConnectionFactories.chain(getScottHsqldb(), getSteelwheelsHsqldb());
     final String[] lines = {
         "# StartTest: empCount",
+        "!use scott",
         "select count(*) from emp;",
         "C1:BIGINT",
         "14",
         "!ok",
         "# EndTest: empCount",
         "# StartTest: managers",
+        "!use scott",
         "select *",
         "from emp",
         "where job in ('MANAGER', 'PRESIDENT')",
@@ -104,6 +107,7 @@ public class RecordTest {
         "!ok",
         "# EndTest: managers",
         "# StartTest: productCount",
+        "!use steelwheels",
         "select count(*) as c",
         "from \"products\";",
         "C:BIGINT",
@@ -224,16 +228,25 @@ public class RecordTest {
 
   /** Creates a recording with two queries, tries to execute a query that is
    * missing. */
-  @Test void testRecord2() {
-    final File file = TEMP_SUPPLIER.get().file("testRecord2", ".iq");
+  @Test void testPlaySeveral() {
+    final File file = TEMP_SUPPLIER.get().file("testPlaySeveral", ".iq");
     final String[] lines = {
-        "# StartTest: one",
+        "# StartTest: one-scott",
+        "!use scott",
         "select 1;",
         "C1:BIGINT",
         "1",
         "!ok",
-        "# EndTest: one",
+        "# EndTest: one-scott",
+        "# StartTest: one-steelwheels",
+        "!use steelwheels",
+        "select 1;",
+        "C1:BIGINT",
+        "100",
+        "!ok",
+        "# EndTest: one-steelwheels",
         "# StartTest: three",
+        "!use scott",
         "select 3;",
         "C1:BIGINT",
         "3",
@@ -248,13 +261,16 @@ public class RecordTest {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+    final Quidem.ConnectionFactory connectionFactory =
+        ConnectionFactories.chain(getScottHsqldb(), getSteelwheelsHsqldb());
     Config config = Recorders.config()
         .withFile(file)
         .withMode(Mode.PLAY)
-        .withConnectionFactory(getScottHsqldb());
+        .withConnectionFactory(connectionFactory);
     try (Recorder recorder = Recorders.create(config)) {
       recorder.executeQuery("scott", "one", "select 1", isInt(1));
-      recorder.executeQuery("scott", "one", "select 3", isInt(3));
+      recorder.executeQuery("scott", "three", "select 3", isInt(3));
+      recorder.executeQuery("steelwheels", "one", "select 1", isInt(100));
       try {
         recorder.executeQuery("scott", "one", "select 2",
             resultSet -> fail("should not be called"));
