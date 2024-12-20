@@ -52,6 +52,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import static java.util.Arrays.fill;
+
 /** JDBC utilities. */
 public abstract class JdbcUtils {
 
@@ -112,7 +114,7 @@ public abstract class JdbcUtils {
    *   MARKETING, 4
    * </pre></blockquote>
    */
-  static void write(StringBuilder b, ResultSet r) throws SQLException {
+  public static void write(StringBuilder b, ResultSet r) throws SQLException {
     final ResultSetMetaData metaData = r.getMetaData();
     final int columnCount = metaData.getColumnCount();
     for (int i = 0; i < columnCount; i++) {
@@ -142,6 +144,96 @@ public abstract class JdbcUtils {
         }
       }
       b.append('\n');
+    }
+  }
+
+  /** Parses a line containing comma-separated values into an array of
+   * strings.
+   *
+   * <p>Assumes that the array has exactly the right number of slots.
+   * Puts nulls into slots where the string is empty or there are not enough
+   * commas.
+   *
+   * <p>If field values start with a single-quote, reads until it finds a
+   * closing single-quote. Commas inside single-quotes are part of the value.
+   * Single-quotes that are part of the value must be doubled. */
+  public static void parse(String[] fields, String s) {
+    int f = 0;
+    for (int i = 0;; i++) {
+      if (i >= s.length()) {
+        // Reached end of line.
+        break;
+      }
+      final char c = s.charAt(i);
+      if (c == ',') {
+        fields[f++] = null;
+        continue;
+      }
+      if (c == '\'') {
+        // Looking at a single-quoted string. Scan until we see the
+        // closing single-quote. Commas are not special.
+        ++i;
+        final int start = i;
+        boolean escape = false;
+        for (;;) {
+          if (i >= s.length()) {
+            throw new IllegalArgumentException("missing \"'\"");
+          }
+          final char c2 = s.charAt(i);
+          ++i;
+          if (c2 == '\'') {
+            if (i >= s.length()) {
+              // Closing single-quote at end of line.
+              String field = s.substring(start, i - 1);
+              if (escape) {
+                field = field.replace("''", "'");
+              }
+              fields[f++] = field;
+              break;
+            }
+            final char c3 = s.charAt(i);
+            if (c3 == '\'') {
+              escape = true;
+              ++i;
+              if (i >= s.length()) {
+                throw new IllegalArgumentException(
+                    "missing \"'\" following escaped \"'\"");
+              }
+            } else if (c3 == ',') {
+              // Closing single-quote occurs before comma
+              String field = s.substring(start, i - 1);
+              if (escape) {
+                field = field.replace("''", "'");
+              }
+              fields[f++] = field;
+              break;
+            } else {
+              throw new IllegalArgumentException(
+                  "quoted string must be followed by comma or line ending");
+            }
+          }
+        }
+      } else {
+        final int start = i;
+        for (;;) {
+          ++i;
+          if (i >= s.length()) {
+            // Field terminated by end of line
+            fields[f++] = s.substring(start, i);
+            break;
+          }
+          final char c2 = s.charAt(i);
+          if (c2 == ',') {
+            // Field terminated by comma
+            fields[f++] = s.substring(start, i);
+            break;
+          }
+        }
+      }
+    }
+    // Reached end of line. Any remaining fields are null.
+    while (f < fields.length) {
+      fields[f++] = null;
     }
   }
 
@@ -177,7 +269,7 @@ public abstract class JdbcUtils {
         new NullResultSet() {
           private boolean wasNull;
           int line = -1;
-          String[] fields;
+          final String[] fields = new String[names.size()];
 
           @Override public ResultSetMetaData getMetaData() {
             return new NullResultSetMetaData() {
@@ -202,13 +294,14 @@ public abstract class JdbcUtils {
 
           @Override public boolean next() {
             ++line;
-            if (line < lines.size()) {
-              fields = lines.get(line).split(",");
-              return true;
-            } else {
-              fields = null;
+            if (line >= lines.size()) {
+              fill(fields, null);
               return false;
             }
+
+            // Populate fields by parsing line
+            parse(fields, lines.get(line));
+            return true;
           }
 
           @Override public boolean wasNull() {
@@ -217,20 +310,8 @@ public abstract class JdbcUtils {
 
           @Override public String getString(int columnIndex) {
             final String s = fields[columnIndex - 1];
-            if (s.isEmpty()) {
-              // null is represented by the empty string
-              wasNull = true;
-              return null;
-            } else {
-              // the empty string is represented by two single-quotes
-              wasNull = false;
-              if (s.startsWith("'")) {
-                // Convert "''" to "",
-                // "'Don''t'" to "Don't".
-                return s.substring(1, s.length() - 1);
-              }
-              return s;
-            }
+            wasNull = s == null;
+            return s;
           }
 
           @Override public boolean getBoolean(int columnIndex) {
