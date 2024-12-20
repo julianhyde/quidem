@@ -17,6 +17,7 @@
 package net.hydromatic.quidem;
 
 import net.hydromatic.quidem.record.Config;
+import net.hydromatic.quidem.record.JdbcUtils;
 import net.hydromatic.quidem.record.Mode;
 import net.hydromatic.quidem.record.Recorder;
 import net.hydromatic.quidem.record.Recorders;
@@ -47,6 +48,8 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.junit.jupiter.api.Assertions.fail;
+
+import static java.util.Arrays.fill;
 
 /** Tests the recorder. */
 public class RecordTest {
@@ -296,10 +299,186 @@ public class RecordTest {
     };
   }
 
-  void simpleQuery(Recorder recorder) {
-    recorder.executeQuery("scott", "one", "select 1", resultSet -> { });
+  /** Tests a query where one of the columns contains null, empty, and non-empty
+   * strings. It is challenging to find an encoding that can distinguish between
+   * null and empty string values. */
+  @Test void testNullAndEmptyString() {
+    final Quidem.ConnectionFactory connectionFactory =
+        ConnectionFactories.chain(getScottHsqldb(), getSteelwheelsHsqldb());
+    final String sql = "with t as\n"
+        + "  (select ename, substr(ename, 1, mod(mgr, 5) - 1) as e\n"
+        + "    from emp)\n"
+        + "select ename, e, e is null as n, char_length(e) as len\n"
+        + "from t";
+    final String[] strings =
+        recordAndPlay("testNullAndEmptyString", connectionFactory, "scott",
+            sql);
+    assertThat(strings[0], is(strings[1]));
   }
 
+  /** Runs a query twice - once in RECORD mode, once in PLAY mode - and returns
+   * the results from both. */
+  private static String[] recordAndPlay(String testName,
+      Quidem.ConnectionFactory connectionFactory, String db, String sql) {
+    final File file = TEMP_SUPPLIER.get().file(testName, ".iq");
+    Config config = Recorders.config()
+        .withFile(file)
+        .withConnectionFactory(connectionFactory);
+    final StringBuilder b = new StringBuilder();
+    try (Recorder recorder = Recorders.create(config.withMode(Mode.RECORD))) {
+      recorder.executeQuery(db, "a query", sql, resultSet -> {
+        try {
+          JdbcUtils.write(b, resultSet);
+        } catch (SQLException e) {
+          fail(
+              String.format("error while serializing result set: sql [%s]",
+                  sql), e);
+        }
+      });
+    }
+    final StringBuilder b2 = new StringBuilder();
+    try (Recorder recorder = Recorders.create(config.withMode(Mode.PLAY))) {
+      recorder.executeQuery(db, "a query", sql, resultSet -> {
+        try {
+          JdbcUtils.write(b2, resultSet);
+        } catch (SQLException e) {
+          fail(
+              String.format("error while serializing result set: sql [%s]",
+                  sql), e);
+        }
+      });
+    }
+    return new String[]{b.toString(), b2.toString()};
+  }
+
+  /** Tests {@link JdbcUtils#parse(java.lang.String[], java.lang.String)},
+   * which parses a comma-separated line. */
+  @Test void testParse() {
+    final String[] fields = new String[3];
+
+    // Simple case
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "wx,y,z");
+    assertThat(fields[0], is("wx"));
+    assertThat(fields[1], is("y"));
+    assertThat(fields[2], is("z"));
+
+    // Empty at end
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "x,y,");
+    assertThat(fields[0], is("x"));
+    assertThat(fields[1], is("y"));
+    assertThat(fields[2], nullValue());
+
+    // Too few commas
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "x,y");
+    assertThat(fields[0], is("x"));
+    assertThat(fields[1], is("y"));
+    assertThat(fields[2], nullValue());
+
+    // Too few commas
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "x");
+    assertThat(fields[0], is("x"));
+    assertThat(fields[1], nullValue());
+    assertThat(fields[2], nullValue());
+
+    // Empty field in middle
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "x,,z");
+    assertThat(fields[0], is("x"));
+    assertThat(fields[1], nullValue());
+    assertThat(fields[2], is("z"));
+
+    // Empty field at start
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, ",y,z");
+    assertThat(fields[0], nullValue());
+    assertThat(fields[1], is("y"));
+    assertThat(fields[2], is("z"));
+
+    // Empty field at start and middle
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, ",,z");
+    assertThat(fields[0], nullValue());
+    assertThat(fields[1], nullValue());
+    assertThat(fields[2], is("z"));
+
+    // Empty line
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "");
+    assertThat(fields[0], nullValue());
+    assertThat(fields[1], nullValue());
+    assertThat(fields[2], nullValue());
+
+    // Quoted first field
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "'x,a',y,z");
+    assertThat(fields[0], is("x,a"));
+    assertThat(fields[1], is("y"));
+    assertThat(fields[2], is("z"));
+
+    // Single-quote in quoted field
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "'x''a','y''b','z''c'");
+    assertThat(fields[0], is("x'a"));
+    assertThat(fields[1], is("y'b"));
+    assertThat(fields[2], is("z'c"));
+
+    // Single-quote at end of quoted field
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "'''x''a''','''y''b''','''z''c'''");
+    assertThat(fields[0], is("'x'a'"));
+    assertThat(fields[1], is("'y'b'"));
+    assertThat(fields[2], is("'z'c'"));
+
+    // Quoted middle field
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "x,'y,a',z");
+    assertThat(fields[0], is("x"));
+    assertThat(fields[1], is("y,a"));
+    assertThat(fields[2], is("z"));
+
+    // Quoted last field
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "x,y,'z,a'");
+    assertThat(fields[0], is("x"));
+    assertThat(fields[1], is("y"));
+    assertThat(fields[2], is("z,a"));
+
+    // Quoted last field, too few fields
+    fill(fields, "xxx");
+    JdbcUtils.parse(fields, "x,'y,a'");
+    assertThat(fields[0], is("x"));
+    assertThat(fields[1], is("y,a"));
+    assertThat(fields[2], nullValue());
+
+    // Line ends following an escaped single-quote
+    fill(fields, "xxx");
+    try {
+      JdbcUtils.parse(fields, "x,y,'z''");
+      fail("expected error");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(), is("missing \"'\" following escaped \"'\""));
+    }
+
+    // Single-quote is not end of field
+    fill(fields, "xxx");
+    try {
+      JdbcUtils.parse(fields, "x,'y,a'b,z");
+      fail("expected error");
+    } catch (IllegalArgumentException e) {
+      assertThat(e.getMessage(),
+          is("quoted string must be followed by comma or line ending"));
+    }
+
+    // Single field
+    final String[] fields1 = new String[1];
+    fill(fields1, "xxx");
+    JdbcUtils.parse(fields1, "123");
+    assertThat(fields1[0], is("123"));
+  }
 }
 
 // End RecordTest.java

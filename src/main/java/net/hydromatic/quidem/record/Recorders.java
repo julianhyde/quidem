@@ -41,6 +41,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 /** Utilities for recording and playback. */
@@ -119,7 +120,7 @@ public abstract class Recorders {
       super(config);
       if (config.file == null) {
         throw new IllegalStateException(
-            String.format("mode '%s' requires a file", config.mode));
+            format("mode '%s' requires a file", config.mode));
       }
       this.file = requireNonNull(config.file);
     }
@@ -151,7 +152,7 @@ public abstract class Recorders {
         sectionBuilder.parse(br, consumer);
       } catch (IOException e) {
         throw new RuntimeException(
-            String.format("file parsing file '%s'", file), e);
+            format("file parsing file '%s'", file), e);
       }
     }
 
@@ -160,7 +161,7 @@ public abstract class Recorders {
       final Section section = sectionsBySql.get(new StringPair(db, sql));
       if (section == null) {
         throw new IllegalArgumentException(
-            String.format("sql [%s] is not in recording", sql));
+            format("sql [%s] is not in recording", sql));
       }
       section.toResultSet(consumer);
     }
@@ -198,7 +199,8 @@ public abstract class Recorders {
           section.toResultSet(consumer);
         }
       } catch (Exception e) {
-        throw new RuntimeException(e);
+        throw new RuntimeException(format("while executing query [%s]", sql),
+            e);
       }
     }
 
@@ -290,7 +292,7 @@ public abstract class Recorders {
               line.substring("# EndTest: ".length()).trim();
           if (!Objects.equals(sectionName, name)) {
             throw new IllegalArgumentException(
-                String.format("end '%s' does not match start '%s'",
+                format("end '%s' does not match start '%s'",
                     sectionName, name));
           }
           end(consumer);
