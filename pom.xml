@@ -78,6 +78,7 @@
     <maven-site-plugin.version>4.0.0-M13</maven-site-plugin.version>
     <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+    <postgresql-driver.version>42.7.5</postgresql-driver.version>
     <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
     <steelwheels-data-hsqldb.version>0.2</steelwheels-data-hsqldb.version>
 
@@ -177,6 +178,12 @@
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
       <version>${junit-jupiter.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${postgresql-driver.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
