@@ -22,7 +22,7 @@ import net.hydromatic.quidem.record.JdbcUtils;
 import net.hydromatic.quidem.record.Mode;
 import net.hydromatic.quidem.record.Recorder;
 import net.hydromatic.quidem.record.Recorders;
-import net.hydromatic.quidem.util.TestUtils;
+import net.hydromatic.quidem.util.TestUtils.FileFont;
 import net.hydromatic.scott.data.hsqldb.ScottHsqldb;
 import net.hydromatic.steelwheels.data.hsqldb.SteelwheelsHsqldb;
 
@@ -66,10 +66,11 @@ import static java.util.Arrays.fill;
 /** Tests the recorder. */
 public class RecordTest {
 
-  /** A supplier of {@link net.hydromatic.quidem.TestUtils.FileFont}
-   * objects (each of which is a supplier of temporary files). */
-  static final Supplier<TestUtils.FileFont> TEMP_SUPPLIER =
-      Suppliers.memoize(() -> new TestUtils.FileFont("quidem-record-test"));
+  /** A supplier of {@link FileFont} objects (each of which is a supplier of
+   * temporary files). */
+  @SuppressWarnings("FunctionalExpressionCanBeFolded")
+  static final Supplier<FileFont> TEMP_SUPPLIER =
+      Suppliers.memoize(() -> new FileFont("quidem-record-test"))::get;
 
   /** Whether Postgres is enabled.
    *
