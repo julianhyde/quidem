@@ -20,7 +20,14 @@ package net.hydromatic.quidem.record;
  *
  * @see Config#withMode(Mode) */
 public enum Mode {
-  PLAY, RECORD, PASS_THROUGH
+  /** Requires that queries are in the recording. */
+  PLAY,
+
+  /** Executes queries on the DB and writes them to the file. */
+  RECORD,
+
+  /** Does not read or write a recording file. */
+  PASS_THROUGH
 }
 
 // End Mode.java

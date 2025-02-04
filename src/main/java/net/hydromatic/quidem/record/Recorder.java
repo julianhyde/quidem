@@ -44,4 +44,4 @@ public interface Recorder extends AutoCloseable {
   @Override void close();
 }
 
-// End Config.java
+// End Recorder.java
