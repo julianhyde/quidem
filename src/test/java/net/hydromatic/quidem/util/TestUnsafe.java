@@ -117,7 +117,7 @@ public abstract class TestUnsafe {
   public static boolean haveGit() {
     // Is there a '.git' directory? If not, we may be in a source tree
     // unzipped from a tarball.
-    final File base = TestUtil.getBaseDir(TestUnsafe.class);
+    final File base = TestUtils.getBaseDir(TestUnsafe.class);
     final File gitDir = new File(base, ".git");
     if (!gitDir.exists() || !gitDir.isDirectory() || !gitDir.canRead()) {
       return false;
@@ -183,7 +183,7 @@ public abstract class TestUnsafe {
               .add("ls-files")
               .add(patterns)
               .build();
-      final File base = TestUtil.getBaseDir(TestUnsafe.class);
+      final File base = TestUtils.getBaseDir(TestUnsafe.class);
       try {
         final StringWriter sw = new StringWriter();
         int status = runAppProcess(argumentList, base, null, null, sw);
@@ -230,7 +230,7 @@ public abstract class TestUnsafe {
     //   body2
     //
     // then split on "===\n"
-    final File base = TestUtil.getBaseDir(TestUnsafe.class);
+    final File base = TestUtils.getBaseDir(TestUnsafe.class);
     final List<String> argumentList =
         ImmutableList.of("git", "log", "-n" + n, "--pretty=format:===%n%B");
     try {

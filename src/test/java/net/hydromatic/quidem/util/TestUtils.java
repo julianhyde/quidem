@@ -25,7 +25,7 @@ import java.net.URL;
 import org.apache.calcite.util.Sources;
 
 /** Static utilities for JUnit tests. */
-public abstract class TestUtil {
+public abstract class TestUtils {
   /** Returns the root directory of the source tree. */
   public static File getBaseDir(Class<?> klass) {
     // Algorithm:
@@ -61,4 +61,4 @@ public abstract class TestUtil {
   }
 }
 
-// End TestUtil.java
+// End TestUtils.java
