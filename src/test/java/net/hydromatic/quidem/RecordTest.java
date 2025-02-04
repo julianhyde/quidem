@@ -84,7 +84,7 @@ public class RecordTest {
    *   # alter user postgres password 'postgres';
    * </pre></blockquote>
    */
-  private static final boolean POSTGRES_ENABLED = true;
+  private static final boolean POSTGRES_ENABLED = false;
   private static final String POSTGRES_URI = "jdbc:postgresql:template1";
   private static final String POSTGRES_USER = "postgres";
   private static final String POSTGRES_PASSWORD = "postgres";
