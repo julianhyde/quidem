@@ -1308,9 +1308,13 @@ public class QuidemTest {
 
   @Test void testSetMultiLine() {
     final String input = "!set foo \"+AA.aa,\n"
-            + "-BB.bb\"";
+        + "-BB.bb\n"
+        + "+CC.cc\n"
+        + "DD.dd\"";
     final String output = "!set foo \"+AA.aa,\n"
-            + "-BB.bb\"";
+        + "-BB.bb\n"
+        + "+CC.cc\n"
+        + "DD.dd\"";
     assertThatQuidem(input).output(containsString(output));
   }
 
