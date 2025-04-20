@@ -232,7 +232,7 @@ public class QuidemTest {
         + "\n";
     assertThatQuidem(input)
         .transform(b -> b.withConnectionFactory(new FooFactory()))
-        .output(containsString(output));
+        .output(is(output));
   }
 
   @Test void testPlan() {
@@ -305,7 +305,7 @@ public class QuidemTest {
         + "2\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   /** If the statement contains 'order by', result is not re-ordered to match
@@ -326,7 +326,7 @@ public class QuidemTest {
         + "2\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
 
     // In (1, 2), out (1, 2). Test passes.
     final String input1 = "!use scott\n"
@@ -343,7 +343,7 @@ public class QuidemTest {
         + "2\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input1).output(containsString(output1));
+    assertThatQuidem(input1).output(is(output1));
   }
 
   /** As {@link #testOkOrderBy()} but for MySQL. */
@@ -375,7 +375,7 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
 
     // In (1, 2), out (1, 2). Test passes.
     final String input1 = "!use scott\n"
@@ -404,7 +404,7 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input1).output(containsString(output1));
+    assertThatQuidem(input1).output(is(output1));
   }
 
   /** If the statement does not contain 'order by', result is re-ordered to
@@ -426,7 +426,7 @@ public class QuidemTest {
         + "1\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
 
     // In (1, 2), out (1, 2).
     final String input1 = "!use scott\n"
@@ -443,7 +443,7 @@ public class QuidemTest {
         + "2\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input1).output(containsString(output1));
+    assertThatQuidem(input1).output(is(output1));
   }
 
   /** Content inside a '!plan' command, that needs to be matched. */
@@ -484,7 +484,7 @@ public class QuidemTest {
         + "!plan\n"
         + "!}\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   @Test void testIfTrue() {
@@ -505,7 +505,7 @@ public class QuidemTest {
         + "!ok\n"
         + "!}\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   /** Test case for
@@ -553,7 +553,7 @@ public class QuidemTest {
         + "!ok\n"
         + "!}\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   /** Test case for
@@ -601,7 +601,7 @@ public class QuidemTest {
         + "!ok\n"
         + "!}\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   @Test void testSkip() {
@@ -623,7 +623,7 @@ public class QuidemTest {
         + "you like\n"
         + "!error\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   @Test void testSqlIfFalsePlan() {
@@ -647,7 +647,7 @@ public class QuidemTest {
         + "C1 INTEGER(32)\n"
         + "!type\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   @Test void testJustify() {
@@ -703,7 +703,7 @@ public class QuidemTest {
         + "TRUE, 1, 1, 1.0E0, 1.0E0, 1\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   @Test void testOracle() {
@@ -755,8 +755,8 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
-    assertThatQuidem(output).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
+    assertThatQuidem(output).output(is(output));
   }
 
   @Test void testTrimTrailingSpacesOracle() {
@@ -781,8 +781,8 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
-    assertThatQuidem(output).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
+    assertThatQuidem(output).output(is(output));
   }
 
   @Test void testTrimTrailingSpacesPsql() {
@@ -806,8 +806,8 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
-    assertThatQuidem(output).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
+    assertThatQuidem(output).output(is(output));
   }
 
   /** Test case for
@@ -833,7 +833,7 @@ public class QuidemTest {
         + "\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   /** Tests the '!update' command against INSERT and DELETE statements,
@@ -856,7 +856,7 @@ public class QuidemTest {
         + "\n"
         + "!update\n"
         + "\n";
-    assertThatQuidem(input0).output(containsString(output0));
+    assertThatQuidem(input0).output(is(output0));
 
     final String input1 = "!use scott\n"
         + "insert into scott.dept2 values (50, 'DEV', 'SAN DIEGO');\n"
@@ -875,7 +875,7 @@ public class QuidemTest {
         + "SUBQUERIES[]]\n"
         + "!plan\n"
         + "\n";
-    assertThatQuidem(input1).output(containsString(output1));
+    assertThatQuidem(input1).output(is(output1));
 
     // remove the row
     final String input2 = "!use scott\n"
@@ -888,7 +888,7 @@ public class QuidemTest {
         + "\n"
         + "!update\n"
         + "\n";
-    assertThatQuidem(input2).output(containsString(output2));
+    assertThatQuidem(input2).output(is(output2));
 
     // no row to remove
     final String output3 = "!use scott\n"
@@ -897,7 +897,7 @@ public class QuidemTest {
         + "\n"
         + "!update\n"
         + "\n";
-    assertThatQuidem(input2).output(containsString(output3));
+    assertThatQuidem(input2).output(is(output3));
 
     // for DML, using '!ok' works, but is not as pretty as '!update'
     final String input4 = "!use scott\n"
@@ -909,7 +909,7 @@ public class QuidemTest {
         + "C1\n"
         + "!ok\n"
         + "\n";
-    assertThatQuidem(input4).output(containsString(output4));
+    assertThatQuidem(input4).output(is(output4));
   }
 
   /** Tests the '!type' command. */
@@ -929,7 +929,7 @@ public class QuidemTest {
         + "SAL DECIMAL(7, 2)\n"
         + "!type\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   /** Tests the '!verify' command. */
@@ -942,7 +942,7 @@ public class QuidemTest {
         + "select * from INFORMATION_SCHEMA.TABLES;\n"
         + "!verify\n"
         + "\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   /** Tests the '!verify' command where the reference database produces
@@ -1093,7 +1093,7 @@ public class QuidemTest {
   @Test void testUnknownCommandFails() {
     final String in = "!use foo\nvalues 1;\n!ok\n!foo-command args";
     try {
-      assertThatQuidem(in).output(containsString("xx"));
+      assertThatQuidem(in).output(is("xx"));
       throw new AssertionError("expected throw");
     } catch (RuntimeException e) {
       assertThat(e.getMessage(),
@@ -1111,7 +1111,7 @@ public class QuidemTest {
             .withConnectionFactory(new FooFactory())
             .withCommandHandler(new FooCommandHandler());
     try {
-      new Fluent(in0, configBuilder).output(containsString("xx"));
+      new Fluent(in0, configBuilder).output(is("xx"));
       throw new AssertionError("expected throw");
     } catch (RuntimeException e) {
       assertThat(e.getMessage(),
@@ -1130,7 +1130,7 @@ public class QuidemTest {
         + "the line: foo-command args\n"
         + "the command: FooCommand\n"
         + "previous SQL command: SqlCommand[sql: values 1, sort:true]\n";
-    new Fluent(in, configBuilder).output(containsString(out));
+    new Fluent(in, configBuilder).output(is(out));
   }
 
   @Test void testCustomCommandHandlerMain() throws Exception {
@@ -1262,7 +1262,7 @@ public class QuidemTest {
         + "Cannot pop foo: stack is empty\n"
         + "foo null\n"
         + "!show foo\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
   }
 
   @Test void testSetInteger() {
@@ -1303,7 +1303,64 @@ public class QuidemTest {
         + "!pop foo\n"
         + "foo null\n"
         + "!show foo\n";
-    assertThatQuidem(input).output(containsString(output));
+    assertThatQuidem(input).output(is(output));
+  }
+
+  /** Tests {@code !set} whose value is an unquoted string. */
+  @Test void testSetString() {
+    final String input = "!set foo abc\n"
+        + "!show foo\n";
+    final String output = "!set foo abc\n"
+        + "foo abc\n"
+        + "!show foo\n";
+    assertThatQuidem(input).output(is(output));
+  }
+
+  /** Tests {@code !set} whose value is a multi-line double-quoted string. */
+  @Test void testSetMultiLine() {
+    final String input = "!set foo \"+AA.aa,\n"
+        + "-BB.bb,\n"
+        + "+CC.cc,\n"
+        + "\n"
+        + "DD.dd\""
+        + "\n"
+        + "!show foo\n";
+    final String output = "!set foo \"+AA.aa,\n"
+        + "-BB.bb,\n"
+        + "+CC.cc,\n"
+        + "\n"
+        + "DD.dd\""
+        + "\n"
+        + "foo \"+AA.aa,-BB.bb,+CC.cc,DD.dd\"\n"
+        + "!show foo\n";
+    assertThatQuidem(input).output(is(output));
+  }
+
+  /** Tests {@code !set} whose value is an unclosed double-quoted string. */
+  @Test void testSetMultiLineUnclosed() {
+    final String input = "!set foo \"+AA.aa,\n"
+        + "-BB.bb,\n"
+        + "+CC.cc,\n"
+        + "  \n"
+        + "DD.dd";
+    final String output = "!set foo \"+AA.aa,\n"
+        + "-BB.bb,\n"
+        + "+CC.cc,\n"
+        + "  \n"
+        + "DD.dd\n";
+    assertThatQuidem(input).output(is(output));
+  }
+
+  /** Tests {@code !set} with only a double-quote on the first line. */
+  @Test void testSetMultiLineEmptyFirstLine() {
+    final String input = "!set foo \"\n"
+        + "abc\"\n"
+        + "!show foo\n";
+    final String output = "!set foo \"\n"
+        + "abc\"\n"
+        + "foo \"abc\"\n"
+        + "!show foo\n";
+    assertThatQuidem(input).output(is(output));
   }
 
   /** Tests that the {@link net.hydromatic.quidem.Quidem.PropertyHandler} is
@@ -1352,7 +1409,7 @@ public class QuidemTest {
             .append(value).append('\n');
     assertThatQuidem(input)
         .withPropertyHandler(propertyHandler)
-        .output(containsString(output));
+        .output(is(output));
     final String propertyEvents = "foo=-123\n"
         + "foo=345\n"
         + "bar=0\n"

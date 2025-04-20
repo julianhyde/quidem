@@ -608,9 +608,22 @@ public class Quidem {
             return new PopCommand(lines, property, propertyName);
           }
           if (line.startsWith("set ") || line.startsWith("push ")) {
-            String[] parts = line.split(" ");
-            String propertyName = parts[1];
-            String valueString = parts[2];
+            final String[] parts = line.split(" ");
+            final String propertyName = parts[1];
+            final String valueString;
+            if (parts[2].startsWith("\"")) {
+              StringBuilder b = new StringBuilder(parts[2]);
+              while (b.length() < 2 || b.charAt(b.length() - 1) != '"') {
+                String nextLine = nextLine();
+                if (nextLine == null) {
+                  break; // end of file before seeing close quote
+                }
+                b.append(nextLine);
+              }
+              valueString = b.toString();
+            } else {
+              valueString = parts[2];
+            }
             Object value;
             Property property;
             if (propertyName.equals("outputformat")) {

@@ -332,6 +332,18 @@ digits, and is case-sensitive.
 The value is a boolean (`true` or `false`),
 an integer,
 or a string (either one word, or a double-quoted string).
+Double-quoted strings may span more than one line.
+
+Examples:
+```sql
+!set booleanVariable true
+!set numericVariable 123
+!set stringVariable foo
+!set stringVariable "Hello, world!"
+!set stringVariable "A value
+ that spans
+ more than one line."
+```
 
 ### `!set outputformat <format>`
 
