@@ -1306,6 +1306,14 @@ public class QuidemTest {
     assertThatQuidem(input).output(containsString(output));
   }
 
+  @Test void testSetMultiLine() {
+    final String input = "!set foo \"+AA.aa,\n"
+            + "-BB.bb\"";
+    final String output = "!set foo \"+AA.aa,\n"
+            + "-BB.bb\"";
+    assertThatQuidem(input).output(containsString(output));
+  }
+
   /** Tests that the {@link net.hydromatic.quidem.Quidem.PropertyHandler} is
    * called whenever there is a set, push or pop. */
   @Test void testPropertyHandler() {
