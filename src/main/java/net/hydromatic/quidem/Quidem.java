@@ -611,8 +611,13 @@ public class Quidem {
             String[] parts = line.split(" ");
             String propertyName = parts[1];
             String valueString = parts[2];
-            while (valueString.startsWith("\"") && !valueString.endsWith("\"")) {
-              valueString = valueString + nextLine();
+            while (valueString.startsWith("\"")
+                && !valueString.endsWith("\"")) {
+              String nextLine = nextLine();
+              if (nextLine == null) {
+                break;
+              }
+              valueString = valueString + nextLine;
             }
             Object value;
             Property property;
