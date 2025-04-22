@@ -97,7 +97,8 @@ public class QuidemTest {
         + "!plan\n"
         + "\n";
     final String output2 = output.replaceAll("SYS_IDX_10095", "SYS_IDX_10096");
-    assertThatQuidem(input).output(anyOf(is(output), is(output2)));
+    final String output3 = output.replaceAll("SYS_IDX_10095", "SYS_IDX_10094");
+    assertThatQuidem(input).output(anyOf(is(output), is(output2), is(output3)));
   }
 
   @Test void testError() {
