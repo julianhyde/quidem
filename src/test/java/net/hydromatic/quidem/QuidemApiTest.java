@@ -49,7 +49,7 @@ public class QuidemApiTest {
             + "from emp"),
         is(false));
     assertThat(
-        run.isProbablyDeterministic("select empno\n"
+        run.isProbablyDeterministic("select empno\n" //
             + "from emp order by (deptno + 10) / 2 desc"),
         is(true));
   }

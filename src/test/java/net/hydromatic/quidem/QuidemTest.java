@@ -102,7 +102,7 @@ public class QuidemTest {
   }
 
   @Test void testError() {
-    final String input = "!use scott\n"
+    final String input = "!use scott\n" //
         + "select blah from blah;\n"
         + "!ok\n"
         + "\n";
@@ -113,7 +113,7 @@ public class QuidemTest {
   }
 
   @Test void testErrorTruncated() {
-    final String input = "!use scott\n"
+    final String input = "!use scott\n" //
         + "select blah from blah;\n"
         + "!ok\n"
         + "\n";
@@ -124,7 +124,7 @@ public class QuidemTest {
   }
 
   @Test void testErrorNotTruncated() {
-    final String input = "!use scott\n"
+    final String input = "!use scott\n" //
         + "select blah from blah;\n"
         + "!ok\n"
         + "\n";
@@ -164,7 +164,7 @@ public class QuidemTest {
   }
 
   @Test void testExpectErrorNoExpected() {
-    final String input = "!use scott\n"
+    final String input = "!use scott\n" //
         + "select blah from blah;\n"
         + "!error\n"
         + "\n";
@@ -237,7 +237,7 @@ public class QuidemTest {
   }
 
   @Test void testPlan() {
-    final String input = "!use scott\n"
+    final String input = "!use scott\n" //
         + "values (1), (2);\n"
         + "!plan\n"
         + "\n";
@@ -250,7 +250,7 @@ public class QuidemTest {
   }
 
   @Test void testPlanAfterOk() {
-    final String input = "!use scott\n"
+    final String input = "!use scott\n" //
         + "values (1), (2);\n"
         + "!ok\n"
         + "!plan\n"
@@ -294,7 +294,7 @@ public class QuidemTest {
 
   /** Content inside a '!ok' command, that needs to be matched. */
   @Test void testOkContent() {
-    final String input = "!use scott\n"
+    final String input = "!use scott\n" //
         + "values (1), (2);\n"
         + "baz\n"
         + "!ok\n"
@@ -973,7 +973,7 @@ public class QuidemTest {
 
   /** Tests the '!verify' command with a database that has no reference. */
   @Test void testVerifyNoReference() {
-    final String input = "!use scott\n"
+    final String input = "!use scott\n" //
         + "select * from scott.emp;\n"
         + "!verify\n"
         + "\n";
@@ -1044,7 +1044,7 @@ public class QuidemTest {
   }
 
   @Test void testHelp() throws Exception {
-    final String in = "!use foo\n"
+    final String in = "!use foo\n" //
         + "values 1;\n"
         + "!ok\n";
     final File inFile = writeFile(in);
@@ -1103,7 +1103,7 @@ public class QuidemTest {
   }
 
   @Test void testCustomCommandHandler() {
-    final String in0 = "!use foo\n"
+    final String in0 = "!use foo\n" //
         + "values 1;\n"
         + "!ok\n"
         + "!baz-command args";
@@ -1119,7 +1119,7 @@ public class QuidemTest {
           is("Unknown command: baz-command args"));
     }
 
-    final String in = "!use foo\n"
+    final String in = "!use foo\n" //
         + "values 1;\n"
         + "!ok\n"
         + "!foo-command args";
@@ -1135,7 +1135,7 @@ public class QuidemTest {
   }
 
   @Test void testCustomCommandHandlerMain() throws Exception {
-    final String in = "!use foo\n"
+    final String in = "!use foo\n" //
         + "values 1;\n"
         + "!ok\n"
         + "!foo-command args\n";
@@ -1309,9 +1309,9 @@ public class QuidemTest {
 
   /** Tests {@code !set} whose value is an unquoted string. */
   @Test void testSetString() {
-    final String input = "!set foo abc\n"
+    final String input = "!set foo abc\n" //
         + "!show foo\n";
-    final String output = "!set foo abc\n"
+    final String output = "!set foo abc\n" //
         + "foo abc\n"
         + "!show foo\n";
     assertThatQuidem(input).output(is(output));
@@ -1339,7 +1339,7 @@ public class QuidemTest {
 
   /** Tests {@code !set} whose value is an unclosed double-quoted string. */
   @Test void testSetMultiLineUnclosed() {
-    final String input = "!set foo \"+AA.aa,\n"
+    final String input = "!set foo \"+AA.aa,\n" //
         + "-BB.bb,\n"
         + "+CC.cc,\n"
         + "  \n"
@@ -1354,10 +1354,10 @@ public class QuidemTest {
 
   /** Tests {@code !set} with only a double-quote on the first line. */
   @Test void testSetMultiLineEmptyFirstLine() {
-    final String input = "!set foo \"\n"
+    final String input = "!set foo \"\n" //
         + "abc\"\n"
         + "!show foo\n";
-    final String output = "!set foo \"\n"
+    final String output = "!set foo \"\n" //
         + "abc\"\n"
         + "foo \"abc\"\n"
         + "!show foo\n";
@@ -1621,10 +1621,10 @@ public class QuidemTest {
           }
 
           @Override public void execute(Context x, boolean execute) {
-            x.writer().println("the line: " + line);
-            x.writer().println("the command: " + describe(x));
-            x.writer().println("previous SQL command: "
-                + x.previousSqlCommand().describe(x));
+            x.writer().printf("the line: %s%n", line);
+            x.writer().printf("the command: %s%n", describe(x));
+            x.writer().printf("previous SQL command: %s%n",
+                x.previousSqlCommand().describe(x));
           }
         };
       }
