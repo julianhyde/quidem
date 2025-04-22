@@ -16,42 +16,45 @@
  */
 package net.hydromatic.quidem;
 
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.sql.Connection;
 import java.util.List;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-/** Command.
+/**
+ * Command.
  *
  * @see AbstractCommand
  * @see CommandHandler
  */
 public interface Command {
-  /** Returns a string describing this command.
+  /**
+   * Returns a string describing this command.
    *
-   * <p>For example: "OkCommand [sql: select * from emp]"
-   * or "SkipCommand".
+   * <p>For example: "OkCommand [sql: select * from emp]" or "SkipCommand".
    *
    * @param x Execution context
    */
   String describe(Context x);
 
-  /** Executes this command.
+  /**
+   * Executes this command.
    *
    * @param x Execution context
    * @param execute Whether to execute (false if execution is disabled, say by
-   * an 'if')
-   *
+   *     an 'if')
    * @throws Exception if command fails
    */
   void execute(Context x, boolean execute) throws Exception;
 
-  /** Merges this command with the previous command.
-   * Returns null if merging is not possible. */
-  @Nullable default Command merge(Command previousCommand) {
+  /**
+   * Merges this command with the previous command. Returns null if merging is
+   * not possible.
+   */
+  @Nullable
+  default Command merge(Command previousCommand) {
     return null;
   }
 
@@ -70,8 +73,9 @@ public interface Command {
     void checkResult(boolean execute, boolean output, ResultChecker checker)
         throws Exception;
 
-    void update(String sql, boolean execute, boolean output,
-        ResultChecker checker) throws Exception;
+    void update(
+        String sql, boolean execute, boolean output, ResultChecker checker)
+        throws Exception;
 
     void stack(Throwable resultSetException, Writer writer);
 
@@ -84,6 +88,7 @@ public interface Command {
 
   interface ResultChecker {
     List<String> getOutput(Context x) throws Exception;
+
     void checkResultSet(Context x, Throwable resultSetException);
   }
 }

@@ -31,26 +31,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-/**
- * Parses command-line arguments.
- */
+/** Parses command-line arguments. */
 class Launcher {
   private static final String[] USAGE_LINES = {
-      "Usage: quidem argument... inFile outFile",
-      "",
-      "Arguments:",
-      "  --help",
-      "           Print usage",
-      "  --db name url user password",
-      "           Add a database to the connection factory",
-      "  --var name value",
-      "           Assign a value to a variable",
-      "  --factory className",
-      "           Define a connection factory (must implement interface",
-      "        " + Quidem.ConnectionFactory.class.getCanonicalName() + ")",
-      "  --command-handler className",
-      "           Define a command-handler (must implement interface",
-      "        " + CommandHandler.class.getCanonicalName() + ")",
+    "Usage: quidem argument... inFile outFile",
+    "",
+    "Arguments:",
+    "  --help",
+    "           Print usage",
+    "  --db name url user password",
+    "           Add a database to the connection factory",
+    "  --var name value",
+    "           Assign a value to a variable",
+    "  --factory className",
+    "           Define a connection factory (must implement interface",
+    "        " + Quidem.ConnectionFactory.class.getCanonicalName() + ")",
+    "  --command-handler className",
+    "           Define a command-handler (must implement interface",
+    "        " + CommandHandler.class.getCanonicalName() + ")",
   };
 
   private final List<String> args;
@@ -61,16 +59,16 @@ class Launcher {
     this.out = out;
   }
 
-  /** Creates a launcher, parses command line arguments, and runs Quidem.
+  /**
+   * Creates a launcher, parses command line arguments, and runs Quidem.
    *
-   * <p>Similar to a {@code main} method, but never calls
-   * {@link System#exit(int)}.
+   * <p>Similar to a {@code main} method, but never calls {@link
+   * System#exit(int)}.
    *
    * @param out Writer to which to print output
    * @param args Command-line arguments
-   *
-   * @return Operating system error code (0 = success, 1 = invalid arguments,
-   * 2 = other error)
+   * @return Operating system error code (0 = success, 1 = invalid arguments, 2
+   *     = other error)
    */
   static int main2(PrintWriter out, PrintWriter err, List<String> args) {
     try {
@@ -93,17 +91,18 @@ class Launcher {
     }
   }
 
-  /** Parses the command line arguments, and returns a {@link Quidem} instance.
+  /**
+   * Parses the command line arguments, and returns a {@link Quidem} instance.
    *
-   * @throws ParseException if command line arguments were invalid or usage
-   * was requested
+   * @throws ParseException if command line arguments were invalid or usage was
+   *     requested
    */
   public Quidem parse() throws ParseException {
     final List<Quidem.ConnectionFactory> factories = new ArrayList<>();
     final List<CommandHandler> commandHandlers = new ArrayList<>();
     final Map<String, String> envMap = new LinkedHashMap<>();
     int i;
-    for (i = 0; i < args.size();) {
+    for (i = 0; i < args.size(); ) {
       String arg = args.get(i);
       if (arg.equals("--help")) {
         usage();
@@ -208,13 +207,14 @@ class Launcher {
         new ChainingCommandHandler(commandHandlers);
 
     final Function<String, Object> env = envMap::get;
-    final Quidem.Config config = Quidem.configBuilder()
-        .withReader(reader)
-        .withWriter(writer)
-        .withEnv(env)
-        .withConnectionFactory(connectionFactory)
-        .withCommandHandler(commandHandler)
-        .build();
+    final Quidem.Config config =
+        Quidem.configBuilder()
+            .withReader(reader)
+            .withWriter(writer)
+            .withEnv(env)
+            .withConnectionFactory(connectionFactory)
+            .withCommandHandler(commandHandler)
+            .build();
     return new Quidem(config);
   }
 

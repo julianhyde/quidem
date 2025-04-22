@@ -20,9 +20,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-
-import org.checkerframework.checker.nullness.qual.Nullable;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -50,13 +47,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.StringTokenizer;
 import java.util.function.Function;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-/**
- * Runs a SQL script.
- */
+/** Runs a SQL script. */
 public class Quidem {
   private static final Ordering<String[]> ORDERING =
-      Ordering.natural().nullsLast().lexicographical()
+      Ordering.natural()
+          .nullsLast()
+          .lexicographical()
           .onResultOf(input -> Arrays.asList(input));
 
   public static final boolean DEBUG =
@@ -66,8 +64,7 @@ public class Quidem {
   private static final int DEFAULT_MAX_STACK_LENGTH = 16384;
 
   /** The empty environment. Returns null for all variables. */
-  public static final Function<String, Object> EMPTY_ENV =
-      name -> null;
+  public static final Function<String, Object> EMPTY_ENV = name -> null;
 
   /** The empty environment. Returns null for all database names. */
   public static final ConnectionFactory EMPTY_CONNECTION_FACTORY =
@@ -79,10 +76,12 @@ public class Quidem {
 
   /** A property handler that does nothing. */
   public static final PropertyHandler EMPTY_PROPERTY_HANDLER =
-      (propertyName, value) -> { };
+      (propertyName, value) -> {};
 
-  /** The default value of FEEDBACK in SQL*Plus (the minimum number of rows to
-   * print "n rows selected.") is 6. */
+  /**
+   * The default value of FEEDBACK in SQL*Plus (the minimum number of rows to
+   * print "n rows selected.") is 6.
+   */
   private static final int ORACLE_FEEDBACK = 6;
 
   private final BufferedReader reader;
@@ -90,9 +89,11 @@ public class Quidem {
   /** Holds a stack of values for each property. */
   private final Map<String, List<Object>> map =
       new HashMap<String, List<Object>>();
+
   private final Config config;
   /** Result set from SQL statement just executed. */
   private ResultSet resultSet;
+
   private Throwable resultSetException;
   private final List<String> lines = new ArrayList<String>();
   private String pushedLine;
@@ -104,8 +105,10 @@ public class Quidem {
   private final Function<String, Object> env;
   private SqlCommand previousSqlCommand;
 
-  /** Creates a Quidem interpreter with an empty environment and empty
-   * connection factory. */
+  /**
+   * Creates a Quidem interpreter with an empty environment and empty connection
+   * factory.
+   */
   public Quidem(Reader reader, Writer writer) {
     this(configBuilder().withReader(reader).withWriter(writer).build());
   }
@@ -133,13 +136,20 @@ public class Quidem {
 
   /** Creates a {@link ConfigBuilder} with the default settings. */
   public static ConfigBuilder configBuilder() {
-    return new ConfigBuilder(new StringReader(""), new StringWriter(),
-        EMPTY_CONNECTION_FACTORY, EMPTY_COMMAND_HANDLER,
-        EMPTY_PROPERTY_HANDLER, EMPTY_ENV, DEFAULT_MAX_STACK_LENGTH);
+    return new ConfigBuilder(
+        new StringReader(""),
+        new StringWriter(),
+        EMPTY_CONNECTION_FACTORY,
+        EMPTY_COMMAND_HANDLER,
+        EMPTY_PROPERTY_HANDLER,
+        EMPTY_ENV,
+        DEFAULT_MAX_STACK_LENGTH);
   }
 
-  /** Creates a {@link ConfigBuilder} that contains a copy of the current
-   * configuration. */
+  /**
+   * Creates a {@link ConfigBuilder} that contains a copy of the current
+   * configuration.
+   */
   private ConfigBuilder copyConfigBuilder() {
     return configBuilder()
         .withReader(config.reader())
@@ -150,13 +160,15 @@ public class Quidem {
         .withEnv(config.env());
   }
 
-  /** Entry point from the operating system command line.
+  /**
+   * Entry point from the operating system command line.
    *
    * <p>Calls {@link System#exit(int)} with the following status codes:
+   *
    * <ul>
-   *   <li>0: success</li>
-   *   <li>1: invalid arguments</li>
-   *   <li>2: help</li>
+   *   <li>0: success
+   *   <li>1: invalid arguments
+   *   <li>2: help
    * </ul>
    *
    * @param args Command-line arguments
@@ -181,8 +193,10 @@ public class Quidem {
     }
   }
 
-  /** Executes the commands from the input, writing to the output,
-   * then closing both input and output. */
+  /**
+   * Executes the commands from the input, writing to the output, then closing
+   * both input and output.
+   */
   public void execute() {
     try {
       Command command = new Parser().parse();
@@ -218,8 +232,7 @@ public class Quidem {
     if (refConnection != null) {
       refConnection.close();
     }
-    final ConnectionFactory connectionFactory =
-        config.connectionFactory();
+    final ConnectionFactory connectionFactory = config.connectionFactory();
     connection = connectionFactory.connect(connectionName, false);
     refConnection = connectionFactory.connect(connectionName, true);
   }
@@ -234,8 +247,13 @@ public class Quidem {
     }
   }
 
-  private void update(String sql, boolean execute, boolean output,
-      Command.ResultChecker checker, Command.Context x) throws Exception {
+  private void update(
+      String sql,
+      boolean execute,
+      boolean output,
+      Command.ResultChecker checker,
+      Command.Context x)
+      throws Exception {
     if (execute) {
       if (connection == null) {
         throw new RuntimeException("no connection");
@@ -251,8 +269,9 @@ public class Quidem {
         resultSet = null;
         resultSetException = null;
         final int updateCount = statement.executeUpdate(sql);
-        writer.printf("(%d%s modified)%n", updateCount,
-            (updateCount == 1) ? " row" : " rows");
+        writer.printf(
+            "(%d%s modified)%n",
+            updateCount, (updateCount == 1) ? " row" : " rows");
       } catch (SQLException e) {
         resultSetException = e;
       } catch (Throwable e) {
@@ -273,8 +292,11 @@ public class Quidem {
     echo(lines);
   }
 
-  private void checkResult(boolean execute, boolean output,
-      Command.ResultChecker checker, Command.Context x)
+  private void checkResult(
+      boolean execute,
+      boolean output,
+      Command.ResultChecker checker,
+      Command.Context x)
       throws Exception {
     if (execute) {
       if (connection == null) {
@@ -299,7 +321,11 @@ public class Quidem {
           if (resultSet != null) {
             final OutputFormat format =
                 (OutputFormat) env.apply(Property.OUTPUTFORMAT.propertyName());
-            format.format(resultSet, headerLines, bodyLines, footerLines,
+            format.format(
+                resultSet,
+                headerLines,
+                bodyLines,
+                footerLines,
                 sqlCommand.sort);
           }
         } catch (SQLException e) {
@@ -348,8 +374,7 @@ public class Quidem {
                 }
               }
             } else {
-              if (!bodyLines.isEmpty()
-                  && bodyLines.get(0).equals(line)) {
+              if (!bodyLines.isEmpty() && bodyLines.get(0).equals(line)) {
                 bodyLines.remove(0);
                 if (output) {
                   writer.println(line);
@@ -448,7 +473,8 @@ public class Quidem {
 
   private static CharSequence chars(final char c, final int length) {
     return new CharSequence() {
-      @Override public String toString() {
+      @Override
+      public String toString() {
         return Strings.repeat("" + c, length);
       }
 
@@ -486,18 +512,18 @@ public class Quidem {
         if (value instanceof Boolean) {
           return (Boolean) value;
         }
-        return value != null
-            && value.toString().equalsIgnoreCase("true");
+        return value != null && value.toString().equalsIgnoreCase("true");
       }
     }
     return false;
   }
 
-  /** Returns whether a SQL query is likely to produce results always in the
-   * same order.
+  /**
+   * Returns whether a SQL query is likely to produce results always in the same
+   * order.
    *
-   * <p>If Quidem believes that the order is deterministic, it does not sort
-   * the rows before comparing them.
+   * <p>If Quidem believes that the order is deterministic, it does not sort the
+   * rows before comparing them.
    *
    * <p>The result is just a guess. Quidem does not understand the finer points
    * of SQL semantics.
@@ -528,7 +554,7 @@ public class Quidem {
     final List<Command> commands = new ArrayList<Command>();
 
     Command parse() {
-      for (;;) {
+      for (; ; ) {
         Command command;
         try {
           command = nextCommand();
@@ -555,7 +581,7 @@ public class Quidem {
     private Command nextCommand() throws IOException {
       lines.clear();
       ImmutableList<String> content = ImmutableList.of();
-      for (;;) {
+      for (; ; ) {
         String line = nextLine();
         if (line == null) {
           return null;
@@ -663,8 +689,7 @@ public class Quidem {
             lines.clear();
             Command command = new Parser().parse();
             String variable =
-                line.substring("if (".length(),
-                    line.length() - ") {".length());
+                line.substring("if (".length(), line.length() - ") {".length());
             List<String> variables =
                 ImmutableList.copyOf(
                     stringIterator(new StringTokenizer(variable, ".")));
@@ -682,7 +707,7 @@ public class Quidem {
         }
         buf.setLength(0);
         boolean last = false;
-        for (;;) {
+        for (; ; ) {
           if (line.endsWith(";")) {
             last = true;
             line = line.substring(0, line.length() - 1);
@@ -740,9 +765,14 @@ public class Quidem {
   }
 
   /** Called from {@link BuiltInOutputFormat} methods. */
-  static void format(ResultSet resultSet, List<String> headerLines,
-      List<String> bodyLines, List<String> footerLines, boolean sort,
-      BuiltInOutputFormat format) throws SQLException {
+  static void format(
+      ResultSet resultSet,
+      List<String> headerLines,
+      List<String> bodyLines,
+      List<String> footerLines,
+      boolean sort,
+      BuiltInOutputFormat format)
+      throws SQLException {
     final boolean mysql = format == BuiltInOutputFormat.MYSQL;
     final ResultSetMetaData metaData = resultSet.getMetaData();
     final int n = metaData.getColumnCount();
@@ -764,16 +794,16 @@ public class Quidem {
     }
     for (int i = 0; i < widths.length; i++) {
       switch (metaData.getColumnType(i + 1)) {
-      case Types.TINYINT:
-      case Types.SMALLINT:
-      case Types.INTEGER:
-      case Types.BIGINT:
-      case Types.FLOAT:
-      case Types.REAL:
-      case Types.DOUBLE:
-      case Types.NUMERIC:
-      case Types.DECIMAL:
-        rights[i] = true;
+        case Types.TINYINT:
+        case Types.SMALLINT:
+        case Types.INTEGER:
+        case Types.BIGINT:
+        case Types.FLOAT:
+        case Types.REAL:
+        case Types.DOUBLE:
+        case Types.NUMERIC:
+        case Types.DECIMAL:
+          rights[i] = true;
       }
     }
 
@@ -782,13 +812,13 @@ public class Quidem {
     }
 
     switch (format) {
-    case ORACLE:
-      if (rows.isEmpty()) {
-        footerLines.add("");
-        footerLines.add("no rows selected");
-        footerLines.add("");
-        return;
-      }
+      case ORACLE:
+        if (rows.isEmpty()) {
+          footerLines.add("");
+          footerLines.add("no rows selected");
+          footerLines.add("");
+          return;
+        }
     }
 
     // Compute "+-----+---+" (if mysql)
@@ -797,22 +827,22 @@ public class Quidem {
     final StringBuilder buf = new StringBuilder();
     for (int i = 0; i < n; i++) {
       switch (format) {
-      case ORACLE:
-        buf.append(i > 0 ? " " : "");
-        buf.append(chars('-', widths[i]));
-        break;
-      default:
-        buf.append(format == BuiltInOutputFormat.MYSQL || i > 0 ? "+" : "");
-        buf.append(chars('-', widths[i] + 2));
+        case ORACLE:
+          buf.append(i > 0 ? " " : "");
+          buf.append(chars('-', widths[i]));
+          break;
+        default:
+          buf.append(format == BuiltInOutputFormat.MYSQL || i > 0 ? "+" : "");
+          buf.append(chars('-', widths[i] + 2));
       }
     }
     buf.append(mysql ? "+" : "");
     String hyphens = flush(buf);
 
     switch (format) {
-    case MYSQL:
-      headerLines.add(hyphens);
-      break;
+      case MYSQL:
+        headerLines.add(hyphens);
+        break;
     }
 
     // Print "| FOO | B |" (mysql)
@@ -821,19 +851,19 @@ public class Quidem {
     for (int i = 0; i < n; i++) {
       final String label = metaData.getColumnLabel(i + 1);
       switch (format) {
-      case ORACLE:
-        buf.append(i > 0 ? " " : "");
-        buf.append(i < n - 1 ? pad(label, widths[i], false) : label);
-        break;
-      case MYSQL:
-        buf.append(i > 0 ? " | " : "| ");
-        buf.append(pad(label, widths[i], false));
-        break;
-      case PSQL:
-      default:
-        buf.append(i > 0 ? " | " : " ");
-        buf.append(i < n - 1 ? pad(label, widths[i], false) : label);
-        break;
+        case ORACLE:
+          buf.append(i > 0 ? " " : "");
+          buf.append(i < n - 1 ? pad(label, widths[i], false) : label);
+          break;
+        case MYSQL:
+          buf.append(i > 0 ? " | " : "| ");
+          buf.append(pad(label, widths[i], false));
+          break;
+        case PSQL:
+        default:
+          buf.append(i > 0 ? " | " : " ");
+          buf.append(i < n - 1 ? pad(label, widths[i], false) : label);
+          break;
       }
     }
     buf.append(mysql ? " |" : "");
@@ -841,64 +871,66 @@ public class Quidem {
     headerLines.add(hyphens);
     for (String[] row : rows) {
       switch (format) {
-      case MYSQL:
-        for (int i = 0; i < n; i++) {
-          buf.append(i > 0 ? " | " : "| ")
-              .append(pad(row[i], widths[i], rights[i]));
-        }
-        buf.append(" |");
-        break;
+        case MYSQL:
+          for (int i = 0; i < n; i++) {
+            buf.append(i > 0 ? " | " : "| ")
+                .append(pad(row[i], widths[i], rights[i]));
+          }
+          buf.append(" |");
+          break;
 
-      case ORACLE:
-        for (int i = 0; i < n; i++) {
-          buf.append(i > 0 ? " " : "");
-          // don't pad the last field if it is left-justified
-          final String s = i == n - 1 && !rights[i]
-              ? row[i]
-              : pad(row[i], widths[i], rights[i]);
-          buf.append(s);
-        }
-        // Trim trailing spaces
-        while (buf.length() > 0
-            && buf.substring(buf.length() - 1).equals(" ")) {
-          buf.setLength(buf.length() - 1);
-        }
-        break;
+        case ORACLE:
+          for (int i = 0; i < n; i++) {
+            buf.append(i > 0 ? " " : "");
+            // don't pad the last field if it is left-justified
+            final String s =
+                i == n - 1 && !rights[i]
+                    ? row[i]
+                    : pad(row[i], widths[i], rights[i]);
+            buf.append(s);
+          }
+          // Trim trailing spaces
+          while (buf.length() > 0
+              && buf.substring(buf.length() - 1).equals(" ")) {
+            buf.setLength(buf.length() - 1);
+          }
+          break;
 
-      case PSQL:
-      default:
-        for (int i = 0; i < n; i++) {
-          buf.append(i > 0 ? " | " : " ");
-          // don't pad the last field if it is left-justified
-          final String s = i == n - 1 && !rights[i]
-              ? row[i]
-              : pad(row[i], widths[i], rights[i]);
-          buf.append(s);
-        }
-        // Trim trailing spaces
-        while (buf.length() > 0
-               && buf.substring(buf.length() - 1).equals(" ")) {
-          buf.setLength(buf.length() - 1);
-        }
-        break;
+        case PSQL:
+        default:
+          for (int i = 0; i < n; i++) {
+            buf.append(i > 0 ? " | " : " ");
+            // don't pad the last field if it is left-justified
+            final String s =
+                i == n - 1 && !rights[i]
+                    ? row[i]
+                    : pad(row[i], widths[i], rights[i]);
+            buf.append(s);
+          }
+          // Trim trailing spaces
+          while (buf.length() > 0
+              && buf.substring(buf.length() - 1).equals(" ")) {
+            buf.setLength(buf.length() - 1);
+          }
+          break;
       }
       bodyLines.add(flush(buf));
     }
     switch (format) {
-    case MYSQL:
-      footerLines.add(hyphens);
-      // fall through
+      case MYSQL:
+        footerLines.add(hyphens);
+        // fall through
 
-    case PSQL:
-      footerLines.add(
-          rows.size() == 1 ? "(1 row)" : "(" + rows.size() + " rows)");
-      break;
+      case PSQL:
+        footerLines.add(
+            rows.size() == 1 ? "(1 row)" : "(" + rows.size() + " rows)");
+        break;
 
-    case ORACLE:
-      if (rows.size() >= ORACLE_FEEDBACK) {
-        footerLines.add("");
-        footerLines.add(rows.size() + " rows selected.");
-      }
+      case ORACLE:
+        if (rows.size() >= ORACLE_FEEDBACK) {
+          footerLines.add("");
+          footerLines.add(rows.size() + " rows selected.");
+        }
     }
     footerLines.add("");
   }
@@ -910,8 +942,10 @@ public class Quidem {
     return s;
   }
 
-  /** Base class for implementations of Command that have one piece of source
-   * code. */
+  /**
+   * Base class for implementations of Command that have one piece of source
+   * code.
+   */
   abstract static class SimpleCommand extends AbstractCommand {
     protected final ImmutableList<String> lines;
 
@@ -945,7 +979,8 @@ public class Quidem {
       this.output = output;
     }
 
-    @Override public String describe(Context x) {
+    @Override
+    public String describe(Context x) {
       return commandName() + " [sql: " + x.previousSqlCommand().sql + "]";
     }
 
@@ -974,7 +1009,8 @@ public class Quidem {
       return output;
     }
 
-    @Override public @Nullable Command merge(Command previousCommand) {
+    @Override
+    public @Nullable Command merge(Command previousCommand) {
       // If there is a blank line before expected output and an '!ok' command,
       // treat the blank line as part of the expected output.
       //
@@ -989,7 +1025,8 @@ public class Quidem {
       if (previousCommand instanceof CommentCommand) {
         final CommentCommand commentCommand = (CommentCommand) previousCommand;
         if (commentCommand.lines.equals(ImmutableList.of(""))) {
-          return new OkCommand(lines,
+          return new OkCommand(
+              lines,
               ImmutableList.<String>builder()
                   .addAll(commentCommand.lines)
                   .addAll(output)
@@ -1001,8 +1038,10 @@ public class Quidem {
     }
   }
 
-  /** Command that executes a SQL statement and compares the result with a
-   * reference database. */
+  /**
+   * Command that executes a SQL statement and compares the result with a
+   * reference database.
+   */
   static class VerifyCommand extends CheckResultCommand {
     VerifyCommand(List<String> lines) {
       super(lines, false);
@@ -1021,8 +1060,8 @@ public class Quidem {
         final List<String> headerLines = new ArrayList<String>();
         final List<String> bodyLines = new ArrayList<String>();
         final List<String> footerLines = new ArrayList<String>();
-        format.format(resultSet, headerLines, bodyLines, footerLines,
-            sqlCommand.sort);
+        format.format(
+            resultSet, headerLines, bodyLines, footerLines, sqlCommand.sort);
         return ImmutableList.<String>builder()
             .addAll(headerLines)
             .addAll(bodyLines)
@@ -1044,7 +1083,8 @@ public class Quidem {
       this.output = output;
     }
 
-    @Override public String describe(Context x) {
+    @Override
+    public String describe(Context x) {
       return commandName() + "[sql: " + x.previousSqlCommand().sql + "]";
     }
 
@@ -1065,15 +1105,17 @@ public class Quidem {
     }
   }
 
-  /** Command that executes a SQL statement and checks that it throws a given
-   * error. */
+  /**
+   * Command that executes a SQL statement and checks that it throws a given
+   * error.
+   */
   static class ErrorCommand extends OkCommand {
     ErrorCommand(List<String> lines, ImmutableList<String> output) {
       super(lines, output);
     }
 
-    @Override public void checkResultSet(Context x,
-        Throwable resultSetException) {
+    @Override
+    public void checkResultSet(Context x, Throwable resultSetException) {
       if (resultSetException == null) {
         x.writer().println("Expected error, but SQL command did not give one");
         return;
@@ -1172,7 +1214,8 @@ public class Quidem {
       this.content = content;
     }
 
-    @Override public String describe(Context x) {
+    @Override
+    public String describe(Context x) {
       return commandName() + "[sql: " + x.previousSqlCommand().sql + "]";
     }
 
@@ -1187,17 +1230,13 @@ public class Quidem {
           for (int i = 1, n = metaData.getColumnCount(); i <= n; i++) {
             final String label = metaData.getColumnLabel(i);
             final String typeName = metaData.getColumnTypeName(i);
-            buf.append(label)
-                .append(' ')
-                .append(typeName);
+            buf.append(label).append(' ').append(typeName);
             final int precision = metaData.getPrecision(i);
             if (precision > 0) {
-              buf.append("(")
-                  .append(precision);
+              buf.append("(").append(precision);
               final int scale = metaData.getScale(i);
               if (scale > 0) {
-                buf.append(", ")
-                    .append(scale);
+                buf.append(", ").append(scale);
               }
               buf.append(")");
             }
@@ -1244,20 +1283,23 @@ public class Quidem {
     }
   }
 
-  /** Creates a connection for a given name.
+  /**
+   * Creates a connection for a given name.
    *
    * <p>It is kind of a directory service.
    *
-   * <p>Caller must close the connection. */
+   * <p>Caller must close the connection.
+   */
   public interface ConnectionFactory {
-    /** Creates a connection to the named database or reference database.
+    /**
+     * Creates a connection to the named database or reference database.
      *
-     * <p>Returns null if the database is not known
-     * (except {@link UnsupportedConnectionFactory}.
+     * <p>Returns null if the database is not known (except {@link
+     * UnsupportedConnectionFactory}.
      *
      * @param name Name of the database
      * @param reference Whether we require a real connection or a reference
-     *                  connection
+     *     connection
      */
     Connection connect(String name, boolean reference) throws Exception;
   }
@@ -1272,7 +1314,8 @@ public class Quidem {
     }
   }
 
-  /** Command that assigns a value to a property.
+  /**
+   * Command that assigns a value to a property.
    *
    * @see CheckResultCommand
    * @see ExplainCommand
@@ -1283,19 +1326,24 @@ public class Quidem {
     private final String propertyName;
     private final Object value;
 
-    SetCommand(List<String> lines, Property property, String propertyName,
+    SetCommand(
+        List<String> lines,
+        Property property,
+        String propertyName,
         Object value) {
       super(lines);
       this.property = Objects.requireNonNull(property);
       this.propertyName = Objects.requireNonNull(propertyName);
-      Preconditions.checkArgument(property == Property.OTHER
-          || propertyName.equals(property.propertyName()));
+      Preconditions.checkArgument(
+          property == Property.OTHER
+              || propertyName.equals(property.propertyName()));
       this.value = value;
-      Preconditions.checkArgument(value == null
-          || value instanceof Boolean
-          || value instanceof BigDecimal
-          || value instanceof String
-          || value instanceof BuiltInOutputFormat);
+      Preconditions.checkArgument(
+          value == null
+              || value instanceof Boolean
+              || value instanceof BigDecimal
+              || value instanceof String
+              || value instanceof BuiltInOutputFormat);
     }
 
     public void execute(Context x, boolean execute) throws Exception {
@@ -1314,17 +1362,24 @@ public class Quidem {
     }
   }
 
-  /** As {@link SetCommand}, but saves value so that it can be restored using
-   * {@link PopCommand}. */
+  /**
+   * As {@link SetCommand}, but saves value so that it can be restored using
+   * {@link PopCommand}.
+   */
   class PushCommand extends SetCommand {
-    PushCommand(List<String> lines, Property property, String propertyName,
+    PushCommand(
+        List<String> lines,
+        Property property,
+        String propertyName,
         Object value) {
       super(lines, property, propertyName, value);
     }
   }
 
-  /** As {@link SetCommand}, but saves value so that it can be restored using
-   * {@link PopCommand}. */
+  /**
+   * As {@link SetCommand}, but saves value so that it can be restored using
+   * {@link PopCommand}.
+   */
   class PopCommand extends SimpleCommand {
     private final Property property;
     private final String propertyName;
@@ -1333,8 +1388,9 @@ public class Quidem {
       super(lines);
       this.property = Objects.requireNonNull(property);
       this.propertyName = Objects.requireNonNull(propertyName);
-      Preconditions.checkArgument(property == Property.OTHER
-          || propertyName.equals(property.propertyName()));
+      Preconditions.checkArgument(
+          property == Property.OTHER
+              || propertyName.equals(property.propertyName()));
     }
 
     public void execute(Context x, boolean execute) throws Exception {
@@ -1355,13 +1411,13 @@ public class Quidem {
     private final Property property;
     private final String propertyName;
 
-    ShowCommand(List<String> lines, Property property,
-        String propertyName) {
+    ShowCommand(List<String> lines, Property property, String propertyName) {
       super(lines);
       this.property = Objects.requireNonNull(property);
       this.propertyName = Objects.requireNonNull(propertyName);
-      Preconditions.checkArgument(property == Property.OTHER
-          || propertyName.equals(property.propertyName()));
+      Preconditions.checkArgument(
+          property == Property.OTHER
+              || propertyName.equals(property.propertyName()));
     }
 
     public void execute(Context x, boolean execute) throws Exception {
@@ -1389,8 +1445,11 @@ public class Quidem {
     private final Command command;
     private final List<String> variables;
 
-    IfCommand(List<String> ifLines, List<String> endLines,
-        Command command, List<String> variables) {
+    IfCommand(
+        List<String> ifLines,
+        List<String> endLines,
+        Command command,
+        List<String> variables) {
       this.variables = ImmutableList.copyOf(variables);
       this.ifLines = ImmutableList.copyOf(ifLines);
       this.endLines = ImmutableList.copyOf(endLines);
@@ -1414,8 +1473,10 @@ public class Quidem {
     }
   }
 
-  /** Command that switches to a mode where we skip executing the rest of the
-   * input. The input is still printed. */
+  /**
+   * Command that switches to a mode where we skip executing the rest of the
+   * input. The input is still printed.
+   */
   class SkipCommand extends SimpleCommand {
     SkipCommand(List<String> lines) {
       super(lines);
@@ -1460,8 +1521,9 @@ public class Quidem {
         }
         if (e != null) {
           command.execute(x, false); // echo the command
-          x.writer().printf("Error while executing command %s%n",
-              command.describe(x));
+          x.writer()
+              .printf(
+                  "Error while executing command %s%n", command.describe(x));
           x.stack(e, x.writer());
           if (abort) {
             throw (Error) e;
@@ -1471,9 +1533,11 @@ public class Quidem {
     }
   }
 
-  /** Top of the environment stack. If a property is not defined here (with a
+  /**
+   * Top of the environment stack. If a property is not defined here (with a
    * non-empty value stack), we look into the environment provided by the
-   * caller. */
+   * caller.
+   */
   private class TopEnv implements Function<String, Object> {
     private final Function<String, Object> env;
 
@@ -1481,7 +1545,8 @@ public class Quidem {
       this.env = env;
     }
 
-    @Override public Object apply(String s) {
+    @Override
+    public Object apply(String s) {
       final List<Object> list = map.get(s);
       if (list == null || list.isEmpty()) {
         return env.apply(s);
@@ -1498,10 +1563,15 @@ public class Quidem {
   /** The information needed to start Quidem. */
   public interface Config {
     Reader reader();
+
     Writer writer();
+
     ConnectionFactory connectionFactory();
+
     CommandHandler commandHandler();
+
     PropertyHandler propertyHandler();
+
     Function<String, Object> env();
 
     /**
@@ -1513,8 +1583,8 @@ public class Quidem {
      *
      * <p>Useful because it prevents {@code diff} from running out of memory if
      * the error stack is very large. It is preferable to produce a result where
-     * you can see the first N characters of each stack trace than to produce
-     * no result at all.
+     * you can see the first N characters of each stack trace than to produce no
+     * result at all.
      */
     int stackLimit();
   }
@@ -1529,9 +1599,13 @@ public class Quidem {
     private final Function<String, Object> env;
     private final int stackLimit;
 
-    private ConfigBuilder(Reader reader, Writer writer,
-        ConnectionFactory connectionFactory, CommandHandler commandHandler,
-        PropertyHandler propertyHandler, Function<String, Object> env,
+    private ConfigBuilder(
+        Reader reader,
+        Writer writer,
+        ConnectionFactory connectionFactory,
+        CommandHandler commandHandler,
+        PropertyHandler propertyHandler,
+        Function<String, Object> env,
         int stackLimit) {
       this.reader = Objects.requireNonNull(reader);
       this.writer = Objects.requireNonNull(writer);
@@ -1577,51 +1651,94 @@ public class Quidem {
 
     /** Sets {@link Config#reader}. */
     public ConfigBuilder withReader(Reader reader) {
-      return new ConfigBuilder(reader, writer, connectionFactory,
-          commandHandler, propertyHandler, env, stackLimit);
+      return new ConfigBuilder(
+          reader,
+          writer,
+          connectionFactory,
+          commandHandler,
+          propertyHandler,
+          env,
+          stackLimit);
     }
 
     /** Sets {@link Config#writer}. */
     public ConfigBuilder withWriter(Writer writer) {
-      return new ConfigBuilder(reader, writer, connectionFactory,
-          commandHandler, propertyHandler, env, stackLimit);
+      return new ConfigBuilder(
+          reader,
+          writer,
+          connectionFactory,
+          commandHandler,
+          propertyHandler,
+          env,
+          stackLimit);
     }
 
     /** Sets {@link Config#propertyHandler}. */
     public ConfigBuilder withPropertyHandler(PropertyHandler propertyHandler) {
-      return new ConfigBuilder(reader, writer, connectionFactory,
-          commandHandler, propertyHandler, env, stackLimit);
+      return new ConfigBuilder(
+          reader,
+          writer,
+          connectionFactory,
+          commandHandler,
+          propertyHandler,
+          env,
+          stackLimit);
     }
 
     /** Sets {@link Config#env}. */
     public ConfigBuilder withEnv(Function<String, Object> env) {
-      return new ConfigBuilder(reader, writer, connectionFactory,
-          commandHandler, propertyHandler, env, stackLimit);
+      return new ConfigBuilder(
+          reader,
+          writer,
+          connectionFactory,
+          commandHandler,
+          propertyHandler,
+          env,
+          stackLimit);
     }
 
     /** Sets {@link Config#connectionFactory}. */
     public ConfigBuilder withConnectionFactory(
         ConnectionFactory connectionFactory) {
-      return new ConfigBuilder(reader, writer, connectionFactory,
-          commandHandler, propertyHandler, env, stackLimit);
+      return new ConfigBuilder(
+          reader,
+          writer,
+          connectionFactory,
+          commandHandler,
+          propertyHandler,
+          env,
+          stackLimit);
     }
 
     /** Sets {@link Config#commandHandler}. */
-    public ConfigBuilder withCommandHandler(
-        CommandHandler commandHandler) {
-      return new ConfigBuilder(reader, writer, connectionFactory,
-          commandHandler, propertyHandler, env, stackLimit);
+    public ConfigBuilder withCommandHandler(CommandHandler commandHandler) {
+      return new ConfigBuilder(
+          reader,
+          writer,
+          connectionFactory,
+          commandHandler,
+          propertyHandler,
+          env,
+          stackLimit);
     }
 
     /** Sets {@link Config#stackLimit}. */
     public ConfigBuilder withStackLimit(int stackLimit) {
-      return new ConfigBuilder(reader, writer, connectionFactory,
-          commandHandler, propertyHandler, env, stackLimit);
+      return new ConfigBuilder(
+          reader,
+          writer,
+          connectionFactory,
+          commandHandler,
+          propertyHandler,
+          env,
+          stackLimit);
     }
   }
 
-  /** Implementation of {@link Command.Context}. Most methods call through to a
-   * corresponding method in {@link Quidem}. */
+  /**
+   * Implementation of {@link Command.Context}. Most methods call through to a
+   * corresponding method in {@link Quidem}.
+   */
   private class ContextImpl implements Command.Context {
     public PrintWriter writer() {
       return writer;
@@ -1643,13 +1760,18 @@ public class Quidem {
       Quidem.this.use(connectionName);
     }
 
-    public void checkResult(boolean execute, boolean output,
-        Command.ResultChecker checker) throws Exception {
+    public void checkResult(
+        boolean execute, boolean output, Command.ResultChecker checker)
+        throws Exception {
       Quidem.this.checkResult(execute, output, checker, this);
     }
 
-    public void update(String sql, boolean execute, boolean output,
-        Command.ResultChecker checker) throws Exception {
+    public void update(
+        String sql,
+        boolean execute,
+        boolean output,
+        Command.ResultChecker checker)
+        throws Exception {
       Quidem.this.update(sql, execute, output, checker, this);
     }
 

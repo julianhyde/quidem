@@ -15,9 +15,7 @@
  * limitations under the License.
  */
 
-/**
- * Idempotent query script execution.
- */
+/** Idempotent query script execution. */
 package net.hydromatic.quidem;
 
 // End package-info.java

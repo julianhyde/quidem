@@ -16,41 +16,44 @@
  */
 package net.hydromatic.quidem;
 
-import org.junit.jupiter.api.Test;
-
-import java.io.StringReader;
-import java.io.StringWriter;
-
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-/**
- * Tests for {@link Quidem}'s API.
- */
+import java.io.StringReader;
+import java.io.StringWriter;
+import org.junit.jupiter.api.Test;
+
+/** Tests for {@link Quidem}'s API. */
 public class QuidemApiTest {
-  /** Unit test for {@link Quidem#isProbablyDeterministic(String)} and in
-   * particular for
-   * <a href="https://github.com/hydromatic/quidem/issues/7">[QUIDEM-7]
-   * Don't be fooled by ORDER BY inside windowed aggregate</a>. */
-  @Test void testDeterministic() {
-    final Quidem run =
-        new Quidem(new StringReader(""), new StringWriter());
+  /**
+   * Unit test for {@link Quidem#isProbablyDeterministic(String)} and in
+   * particular for <a
+   * href="https://github.com/hydromatic/quidem/issues/7">[QUIDEM-7] Don't be
+   * fooled by ORDER BY inside windowed aggregate</a>.
+   */
+  @Test
+  void testDeterministic() {
+    final Quidem run = new Quidem(new StringReader(""), new StringWriter());
     assertThat(run.isProbablyDeterministic("select * from emp"), is(false));
-    assertThat(run.isProbablyDeterministic("select * from emp order by deptno"),
+    assertThat(
+        run.isProbablyDeterministic("select * from emp order by deptno"),
         is(true));
     assertThat(
-        run.isProbablyDeterministic("select empno,\n"
-            + " sum(sal) over (partition by deptno order by empid)\n"
-            + "from emp order by deptno"),
+        run.isProbablyDeterministic(
+            "select empno,\n"
+                + " sum(sal) over (partition by deptno order by empid)\n"
+                + "from emp order by deptno"),
         is(true));
     assertThat(
-        run.isProbablyDeterministic("select empno,\n"
-            + " sum(sal) over (partition by deptno order by empid)\n"
-            + "from emp"),
+        run.isProbablyDeterministic(
+            "select empno,\n"
+                + " sum(sal) over (partition by deptno order by empid)\n"
+                + "from emp"),
         is(false));
     assertThat(
-        run.isProbablyDeterministic("select empno\n" //
-            + "from emp order by (deptno + 10) / 2 desc"),
+        run.isProbablyDeterministic(
+            "select empno\n" //
+                + "from emp order by (deptno + 10) / 2 desc"),
         is(true));
   }
 }

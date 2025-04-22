@@ -17,11 +17,12 @@
 package net.hydromatic.quidem;
 
 import com.google.common.collect.ImmutableList;
-
 import java.util.List;
 
-/** Command handler that tries several handlers, returning a command
- * from the first that succeeds. */
+/**
+ * Command handler that tries several handlers, returning a command from the
+ * first that succeeds.
+ */
 class ChainingCommandHandler implements CommandHandler {
   private final List<CommandHandler> handlers;
 
@@ -29,8 +30,8 @@ class ChainingCommandHandler implements CommandHandler {
     this.handlers = ImmutableList.copyOf(handlers);
   }
 
-  public Command parseCommand(List<String> lines, List<String> content,
-      String line) {
+  public Command parseCommand(
+      List<String> lines, List<String> content, String line) {
     for (CommandHandler handler : handlers) {
       final Command command = handler.parseCommand(lines, content, line);
       if (command != null) {

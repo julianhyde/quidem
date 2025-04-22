@@ -20,8 +20,7 @@ import java.util.List;
 
 /** Allows custom commands to be specified at run-time. */
 public interface CommandHandler {
-  Command parseCommand(List<String> lines, List<String> content,
-      String line);
+  Command parseCommand(List<String> lines, List<String> content, String line);
 }
 
 // End CommandHandler.java
