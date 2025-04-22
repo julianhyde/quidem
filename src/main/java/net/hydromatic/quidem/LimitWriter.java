@@ -17,14 +17,11 @@
 package net.hydromatic.quidem;
 
 import com.google.common.base.Throwables;
-
 import java.io.FilterWriter;
 import java.io.IOException;
 import java.io.Writer;
 
-/**
- * Writer that accepts only a given amount of text.
- */
+/** Writer that accepts only a given amount of text. */
 class LimitWriter extends FilterWriter {
   private int length;
   private final int maxLength;
@@ -38,7 +35,8 @@ class LimitWriter extends FilterWriter {
     return length;
   }
 
-  @Override public void write(int c) throws IOException {
+  @Override
+  public void write(int c) throws IOException {
     final int newLength = length() + 1;
     if (newLength <= maxLength) {
       super.write(c);
@@ -46,8 +44,8 @@ class LimitWriter extends FilterWriter {
     }
   }
 
-  @Override public void write(char[] cbuf, int off, int len)
-      throws IOException {
+  @Override
+  public void write(char[] cbuf, int off, int len) throws IOException {
     if (length + len <= maxLength) {
       // enough room for whole string
       super.write(cbuf, off, len);
@@ -59,7 +57,8 @@ class LimitWriter extends FilterWriter {
     }
   }
 
-  @Override public void write(String str, int off, int len) throws IOException {
+  @Override
+  public void write(String str, int off, int len) throws IOException {
     if (length + len <= maxLength) {
       // enough room for whole string
       super.write(str, off, len);

@@ -16,19 +16,15 @@
  */
 package net.hydromatic.quidem.util;
 
-import org.apache.calcite.util.Sources;
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.net.URL;
+import org.apache.calcite.util.Sources;
 
-import static java.lang.String.format;
-import static org.junit.jupiter.api.Assertions.fail;
-
-import static java.util.Objects.requireNonNull;
-
-/**
- * Static utilities for JUnit tests.
- */
+/** Static utilities for JUnit tests. */
 public abstract class TestUtil {
   /** Returns the root directory of the source tree. */
   public static File getBaseDir(Class<?> klass) {
@@ -52,8 +48,8 @@ public abstract class TestUtil {
       fail(
           format(
               "Could not find pom.xml, build.gradle.kts or gradle.properties. "
-              + "Started with %s, the current path is %s",
-          classFile.getAbsolutePath(), file.getAbsolutePath()));
+                  + "Started with %s, the current path is %s",
+              classFile.getAbsolutePath(), file.getAbsolutePath()));
     }
     return file;
   }

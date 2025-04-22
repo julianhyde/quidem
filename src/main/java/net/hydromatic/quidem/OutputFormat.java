@@ -22,8 +22,12 @@ import java.util.List;
 /** Scheme for converting the output of a SQL statement into text. */
 interface OutputFormat {
   /** Converts the output of a SQL statement into text. */
-  void format(ResultSet resultSet, List<String> headerLines,
-      List<String> bodyLines, List<String> footerLines, boolean sort)
+  void format(
+      ResultSet resultSet,
+      List<String> headerLines,
+      List<String> bodyLines,
+      List<String> footerLines,
+      boolean sort)
       throws Exception;
 }
 
