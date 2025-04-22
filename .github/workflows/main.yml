@@ -34,7 +34,7 @@ jobs:
 
     strategy:
       matrix:
-        java-version: [ "11", "17", "21" ]
+        java-version: [ "11", "17", "21", "24" ]
         javadoc: [ false ]
         site: [ false ]
         checkstyle-version: [ "" ]

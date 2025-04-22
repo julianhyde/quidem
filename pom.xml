@@ -58,27 +58,27 @@
     <top.dir>${project.basedir}</top.dir>
 
     <!-- Component and plugin versions, in alphabetical order. -->
-    <build-helper-maven-plugin.version>3.5.0</build-helper-maven-plugin.version>
-    <calcite.version>1.38.0</calcite.version>
-    <checkerframework.version>3.42.0</checkerframework.version>
+    <build-helper-maven-plugin.version>3.6.0</build-helper-maven-plugin.version>
+    <calcite.version>1.39.0</calcite.version>
+    <checkerframework.version>3.49.2</checkerframework.version>
     <!-- We support checkstyle 9.3 and higher; 10.0 requires JDK 11 or higher. -->
-    <checkstyle.version>10.12.7</checkstyle.version>
+    <checkstyle.version>10.23.0</checkstyle.version>
     <foodmart-data-hsqldb.version>0.5</foodmart-data-hsqldb.version>
     <git-commit-id-plugin.version>4.9.10</git-commit-id-plugin.version>
     <googleformatter-maven-plugin.version>1.7.5</googleformatter-maven-plugin.version>
     <!-- We support Guava versions 19.0 and higher. -->
-    <guava.version>33.0.0-jre</guava.version>
-    <hamcrest.version>2.2</hamcrest.version>
-    <hsqldb.version>2.7.2</hsqldb.version>
-    <junit-jupiter.version>5.10.1</junit-jupiter.version>
-    <maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
-    <maven-compiler-plugin.version>3.12.1</maven-compiler-plugin.version>
-    <maven-enforcer-plugin.version>3.4.1</maven-enforcer-plugin.version>
-    <maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
-    <maven-javadoc-plugin.version>3.6.3</maven-javadoc-plugin.version>
-    <maven-site-plugin.version>4.0.0-M13</maven-site-plugin.version>
-    <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
-    <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+    <guava.version>33.4.8-jre</guava.version>
+    <hamcrest.version>3.0</hamcrest.version>
+    <hsqldb.version>2.7.4</hsqldb.version>
+    <junit-jupiter.version>5.12.2</junit-jupiter.version>
+    <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
+    <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
+    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+    <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
+    <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
+    <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
+    <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
+    <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <postgresql-driver.version>42.7.5</postgresql-driver.version>
     <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
     <steelwheels-data-hsqldb.version>0.2</steelwheels-data-hsqldb.version>
