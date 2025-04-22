@@ -16,30 +16,28 @@
  */
 package net.hydromatic.quidem;
 
-import net.hydromatic.quidem.util.TestUnsafe;
-
-import org.apache.calcite.util.Puffin;
-import org.apache.calcite.util.Source;
-import org.apache.calcite.util.Sources;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Test;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 
 import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
+import net.hydromatic.quidem.util.TestUnsafe;
+import org.apache.calcite.util.Puffin;
+import org.apache.calcite.util.Source;
+import org.apache.calcite.util.Sources;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.empty;
-
-/** Runs Lint-like checks on the source code.
- * Also tests those checks. */
+/** Runs Lint-like checks on the source code. Also tests those checks. */
 public class LintTest {
   @SuppressWarnings("Convert2MethodRef") // JDK 8 requires lambdas
   private Puffin.Program<GlobalState> makeProgram() {
     return Puffin.builder(GlobalState::new, global -> new FileState(global))
-        .add(line -> line.isLast(),
+        .add(
+            line -> line.isLast(),
             line -> {
               String f = line.filename();
               final int slash = f.lastIndexOf('/');
@@ -47,52 +45,56 @@ public class LintTest {
                   "// End " + (slash < 0 ? f : f.substring(slash + 1));
               if (!line.line().equals(endMarker)
                   && line.filename().endsWith(".java")) {
-                line.state().message("File must end with '" + endMarker + "'",
-                    line);
+                line.state()
+                    .message("File must end with '" + endMarker + "'", line);
               }
             })
-        .add(line -> line.fnr() == 1,
-            line -> line.globalState().fileCount++)
+        .add(line -> line.fnr() == 1, line -> line.globalState().fileCount++)
 
         // Trailing space
-        .add(line -> line.endsWith(" "),
+        .add(
+            line -> line.endsWith(" "),
             line -> line.state().message("Trailing space", line))
 
         // Tab
-        .add(line -> line.contains("\t"),
+        .add(
+            line -> line.contains("\t"),
             line -> line.state().message("Tab", line))
 
         // Comment without space
-        .add(line -> line.matches(".* //[^ ].*")
-                && !line.source().fileOpt()
-                .filter(f -> f.getName().equals("LintTest.java")).isPresent()
-                && !line.contains("//--")
-                && !line.contains("//~")
-                && !line.contains("//noinspection")
-                && !line.contains("//CHECKSTYLE"),
+        .add(
+            line ->
+                line.matches(".* //[^ ].*")
+                    && !line.source()
+                        .fileOpt()
+                        .filter(f -> f.getName().equals("LintTest.java"))
+                        .isPresent()
+                    && !line.contains("//--")
+                    && !line.contains("//~")
+                    && !line.contains("//noinspection")
+                    && !line.contains("//CHECKSTYLE"),
             line -> line.state().message("'//' must be followed by ' '", line))
 
         // Javadoc does not require '</p>', so we do not allow '</p>'
-        .add(line -> line.state().inJavadoc()
-                && line.contains("</p>"),
+        .add(
+            line -> line.state().inJavadoc() && line.contains("</p>"),
             line -> line.state().message("no '</p>'", line))
 
         // No "**/"
-        .add(line -> line.contains(" **/")
-                && line.state().inJavadoc(),
-            line ->
-                line.state().message("no '**/'; use '*/'",
-                    line))
+        .add(
+            line -> line.contains(" **/") && line.state().inJavadoc(),
+            line -> line.state().message("no '**/'; use '*/'", line))
 
         // A Javadoc paragraph '<p>' must not be on its own line.
-        .add(line -> line.matches("^ *\\* <p>"),
+        .add(
+            line -> line.matches("^ *\\* <p>"),
             line ->
-                line.state().message("<p> must not be on its own line",
-                    line))
+                line.state().message("<p> must not be on its own line", line))
 
         // A Javadoc paragraph '<p>' must be preceded by a blank Javadoc
         // line.
-        .add(line -> line.matches("^ *\\*"),
+        .add(
+            line -> line.matches("^ *\\*"),
             line -> {
               final FileState f = line.state();
               if (f.starLine == line.fnr() - 1) {
@@ -100,56 +102,63 @@ public class LintTest {
               }
               f.starLine = line.fnr();
             })
-        .add(line -> line.matches("^ *\\* <p>.*")
-                && line.fnr() - 1 != line.state().starLine,
+        .add(
             line ->
-                line.state().message("<p> must be preceded by blank line",
-                    line))
+                line.matches("^ *\\* <p>.*")
+                    && line.fnr() - 1 != line.state().starLine,
+            line ->
+                line.state()
+                    .message("<p> must be preceded by blank line", line))
 
         // A non-blank line following a blank line must have a '<p>'
-        .add(line -> line.state().inJavadoc()
-                && line.state().ulCount == 0
-                && line.state().blockquoteCount == 0
-                && line.contains("* ")
-                && line.fnr() - 1 == line.state().starLine
-                && line.matches("^ *\\* [^<@].*"),
+        .add(
+            line ->
+                line.state().inJavadoc()
+                    && line.state().ulCount == 0
+                    && line.state().blockquoteCount == 0
+                    && line.contains("* ")
+                    && line.fnr() - 1 == line.state().starLine
+                    && line.matches("^ *\\* [^<@].*"),
             line -> line.state().message("missing '<p>'", line))
 
         // The first "@param" of a javadoc block must be preceded by a blank
         // line.
-        .add(line -> line.matches("^ */\\*\\*.*"),
+        .add(
+            line -> line.matches("^ */\\*\\*.*"),
             line -> {
               final FileState f = line.state();
               f.javadocStartLine = line.fnr();
               f.blockquoteCount = 0;
               f.ulCount = 0;
             })
-        .add(line -> line.matches(".*\\*/"),
+        .add(
+            line -> line.matches(".*\\*/"),
             line -> line.state().javadocEndLine = line.fnr())
-        .add(line -> line.matches("^ *\\* @.*"),
+        .add(
+            line -> line.matches("^ *\\* @.*"),
             line -> {
               if (line.state().inJavadoc()
                   && line.state().atLine < line.state().javadocStartLine
                   && line.fnr() - 1 != line.state().starLine) {
-                line.state().message(
-                    "First @tag must be preceded by blank line",
-                    line);
+                line.state()
+                    .message("First @tag must be preceded by blank line", line);
               }
               line.state().atLine = line.fnr();
             })
-        .add(line -> line.contains("<blockquote>"),
+        .add(
+            line -> line.contains("<blockquote>"),
             line -> line.state().blockquoteCount++)
-        .add(line -> line.contains("</blockquote>"),
+        .add(
+            line -> line.contains("</blockquote>"),
             line -> line.state().blockquoteCount--)
-        .add(line -> line.contains("<ul>"),
-            line -> line.state().ulCount++)
-        .add(line -> line.contains("</ul>"),
-            line -> line.state().ulCount--)
+        .add(line -> line.contains("<ul>"), line -> line.state().ulCount++)
+        .add(line -> line.contains("</ul>"), line -> line.state().ulCount--)
         .build();
   }
 
   /** Tests that source code has no flaws. */
-  @Test void testLint() {
+  @Test
+  void testLint() {
     Assumptions.assumeTrue(TestUnsafe.haveGit(), "Invalid git environment");
 
     final Puffin.Program<GlobalState> program = makeProgram();
@@ -176,7 +185,8 @@ public class LintTest {
       this.message = message;
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
       return source + ":" + line + ":" + message;
     }
   }

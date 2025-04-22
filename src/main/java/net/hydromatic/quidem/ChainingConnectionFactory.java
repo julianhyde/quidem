@@ -17,12 +17,13 @@
 package net.hydromatic.quidem;
 
 import com.google.common.collect.ImmutableList;
-
 import java.sql.Connection;
 import java.util.List;
 
-/** Connection factory that tries several factories, returning a connection
- * from the first that is able to connect. */
+/**
+ * Connection factory that tries several factories, returning a connection from
+ * the first that is able to connect.
+ */
 class ChainingConnectionFactory implements Quidem.ConnectionFactory {
   private final List<Quidem.ConnectionFactory> factories;
 
@@ -30,8 +31,8 @@ class ChainingConnectionFactory implements Quidem.ConnectionFactory {
     this.factories = ImmutableList.copyOf(factories);
   }
 
-  @Override public Connection connect(String name, boolean reference)
-      throws Exception {
+  @Override
+  public Connection connect(String name, boolean reference) throws Exception {
     for (Quidem.ConnectionFactory factory : factories) {
       Connection c = factory.connect(name, reference);
       if (c != null) {

@@ -24,12 +24,15 @@ import java.util.List;
 
 /** Schemes for converting the output of a SQL statement into text. */
 enum BuiltInOutputFormat implements OutputFormat {
-  /**
-   * CSV output format.
-   */
+  /** CSV output format. */
   CSV {
-    @Override public void format(ResultSet resultSet, List<String> headerLines,
-        List<String> bodyLines, List<String> footerLines, boolean sort)
+    @Override
+    public void format(
+        ResultSet resultSet,
+        List<String> headerLines,
+        List<String> bodyLines,
+        List<String> footerLines,
+        boolean sort)
         throws Exception {
       final ResultSetMetaData metaData = resultSet.getMetaData();
       final int n = metaData.getColumnCount();
@@ -60,11 +63,14 @@ enum BuiltInOutputFormat implements OutputFormat {
     }
   },
 
-  /** MySQL output format.
+  /**
+   * MySQL output format.
    *
    * <p>Example:
    *
-   * <blockquote><pre>
+   * <blockquote>
+   *
+   * <pre>
    *   +-------+--------+--------+-------------+
    *   | ename | deptno | gender | first_value |
    *   +-------+--------+--------+-------------+
@@ -72,11 +78,18 @@ enum BuiltInOutputFormat implements OutputFormat {
    *   | Bob   |     10 | M      | Jane        |
    *   +-------+--------+--------+-------------+
    *   (2 rows)
-   * </pre></blockquote>
+   * </pre>
+   *
+   * </blockquote>
    */
   MYSQL {
-    @Override public void format(ResultSet resultSet, List<String> headerLines,
-        List<String> bodyLines, List<String> footerLines, boolean sort)
+    @Override
+    public void format(
+        ResultSet resultSet,
+        List<String> headerLines,
+        List<String> bodyLines,
+        List<String> footerLines,
+        boolean sort)
         throws Exception {
       Quidem.format(resultSet, headerLines, bodyLines, footerLines, sort, this);
     }
@@ -87,22 +100,32 @@ enum BuiltInOutputFormat implements OutputFormat {
    *
    * <p>Example 1 (0 rows):
    *
-   * <blockquote><pre>
+   * <blockquote>
+   *
+   * <pre>
    * no rows selected
-   * </pre></blockquote>
+   * </pre>
+   *
+   * </blockquote>
    *
    * <p>Example 2 (fewer than 6 rows):
    *
-   * <blockquote><pre>
+   * <blockquote>
+   *
+   * <pre>
    *   ename deptno gender first_value
    *   ----- ------ ------ -----------
    *   Jane      10 F      Jane
    *   Bob       10 M      Jane
-   * </pre></blockquote>
+   * </pre>
+   *
+   * </blockquote>
    *
    * <p>Example 3 (6 or more rows):
    *
-   * <blockquote><pre>
+   * <blockquote>
+   *
+   * <pre>
    *   ename deptno gender first_value
    *   ----- ------ ------ -----------
    *   Jane      10 F      Jane
@@ -113,11 +136,18 @@ enum BuiltInOutputFormat implements OutputFormat {
    *   Echo      10 F      Jane
    * &nbsp;
    *   7 rows selected.
-   * </pre></blockquote>
+   * </pre>
+   *
+   * </blockquote>
    */
   ORACLE {
-    @Override public void format(ResultSet resultSet, List<String> headerLines,
-        List<String> bodyLines, List<String> footerLines, boolean sort)
+    @Override
+    public void format(
+        ResultSet resultSet,
+        List<String> headerLines,
+        List<String> bodyLines,
+        List<String> footerLines,
+        boolean sort)
         throws Exception {
       Quidem.format(resultSet, headerLines, bodyLines, footerLines, sort, this);
     }
@@ -129,18 +159,25 @@ enum BuiltInOutputFormat implements OutputFormat {
    * <p>Example:
    *
    * <blockquote>
-   *   <pre>
+   *
+   * <pre>
    *  ename | deptno | gender | first_value
    * -------+--------+--------+-------------
    *  Jane  |     10 | F      | Jane
    *  Bob   |     10 | M      | Jane
    * (2 rows)
-   *   </pre>
+   * </pre>
+   *
    * </blockquote>
    */
   PSQL {
-    @Override public void format(ResultSet resultSet, List<String> headerLines,
-        List<String> bodyLines, List<String> footerLines, boolean sort)
+    @Override
+    public void format(
+        ResultSet resultSet,
+        List<String> headerLines,
+        List<String> bodyLines,
+        List<String> footerLines,
+        boolean sort)
         throws Exception {
       Quidem.format(resultSet, headerLines, bodyLines, footerLines, sort, this);
     }
