@@ -38,14 +38,26 @@ Update the [release history](HISTORY.md),
 the version number at the bottom of [README](README.md),
 and the copyright date in [NOTICE](NOTICE).
 
-```
-./mvnw clean
-./mvnw release:clean
+Switch to JDK 21.
+
+Check that the sandbox is clean:
+
+```bash
 git clean -nx
-git clean -fx
-read -s GPG_PASSPHRASE
-./mvnw -Prelease -Dgpg.passphrase=${GPG_PASSPHRASE} release:prepare
-./mvnw -Prelease -Dgpg.passphrase=${GPG_PASSPHRASE} release:perform
+mvn clean
+```
+
+Prepare:
+
+```bash
+export GPG_TTY=$(tty)
+mvn -Prelease -DreleaseVersion=x.y -DdevelopmentVersion=x.(y+1)-SNAPSHOT release:prepare
+```
+
+Perform:
+
+```bash
+mvn -Prelease -DskipTests release:perform
 ```
 
 Then go to [Sonatype](https://oss.sonatype.org/#stagingRepositories),
@@ -53,4 +65,4 @@ log in, close the repository, and release.
 
 Make sure that the [site](http://www.hydromatic.net/quidem/) has been updated.
 
-[Announce the release](https://twitter.com/hydromatic/status/622842100736856064).
+[Announce the release](https://x.com/julianhyde/status/622842100736856064).

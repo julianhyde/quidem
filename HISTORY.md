@@ -2,6 +2,46 @@
 
 For a full list of releases, see <a href="https://github.com/hydromatic/quidem/releases">github</a>.
 
+## <a href="https://github.com/hydromatic/quidem/releases/tag/quidem-0.12">0.12</a> / 2025-04-28
+
+* [<a href="https://github.com/hydromatic/quidem/issues/80">QUIDEM-80</a>]
+  Query recorder
+* Refactor `ConnectionFactory`
+* Rename `TestUtil` to `TestUtils`
+* [<a href="https://github.com/hydromatic/quidem/issues/95">QUIDEM-95</a>]
+  Enable `google-java-format` plugin, to automatically reformat code to a
+  standard style
+* Prepare for
+  [<a href="https://github.com/hydromatic/quidem/issues/95">QUIDEM-95</a>]
+  by removing some checkstyle rules and adding google-java-format plugin (disabled)
+* [<a href="https://github.com/hydromatic/quidem/issues/93">QUIDEM-93</a>]
+  Allow multi-line strings as arguments to `!set`
+* Lint the source code as part of the test suite
+* Move GitHub repository from `julianhyde` to `hydromatic`
+* Add javadoc badge to README
+* In CI, timeout after 3 minutes, enable JDK 21, disable JDK 8
+* Add Maven Central badge to README
+* Allow CI runs to be triggered manually, and monthly
+
+Upgrades
+
+* Support all JDK versions from 8 to 24
+* Bump maven from 3.5.4 to 3.9.6
+* Bump build-helper-maven-plugin from 3.3.0 to 3.6.0
+* Bump checkerframework from 3.24.0 to 3.49.2
+* Bump checkstyle from 10.4 to 10.23.0
+* Bump guava from 31.1-jre to 33.4.8-jre
+* Bump hamcrest from 2.2 to 3.0
+* Bump hsqldb from 2.7.1 to 2.7.4
+* Bump junit-jupiter from 5.9.1 to 5.12.2
+* Bump maven-checkstyle-plugin from 3.2.0 to 3.6.0
+* Bump maven-compiler-plugin from 3.10.1 to 3.14.0
+* Bump maven-enforcer-plugin from 3.1.0 to 3.5.0
+* Bump maven-gpg-plugin from 3.0.1 to 3.2.7
+* Bump maven-javadoc-plugin from 3.4.1 to 3.11.2
+* Bump maven-site-plugin from 3.12.1 to 3.21.0
+* Bump maven-surefire-plugin from 3.0.0-M7 to 3.5.3
+
 ## <a href="https://github.com/hydromatic/quidem/releases/tag/quidem-0.11">0.11</a> / 2022-11-23
 
 * Remove methods deprecated in
