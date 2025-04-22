@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
+import static java.lang.String.format;
+
 /**
  * Unsafe methods to be used by tests.
  *
@@ -173,8 +175,9 @@ public abstract class TestUnsafe {
         int status =
             runAppProcess(argumentList, base, null, null, sw);
         if (status != 0) {
-          throw new RuntimeException("command " + argumentList
-              + ": exited with status " + status);
+          throw new RuntimeException(
+              format("command %s: exited with status %d", argumentList,
+                  status));
         }
         s = sw.toString();
       } catch (Exception e) {
@@ -223,9 +226,9 @@ public abstract class TestUnsafe {
           runAppProcess(argumentList, base, null, null, sw);
       String s = sw.toString();
       if (status != 0) {
-        throw new RuntimeException("command " + argumentList
-            + ": exited with status " + status
-            + (s.isEmpty() ? "" : "; output [" + s + "]"));
+        throw new RuntimeException(
+            format("command %s: exited with status %d%s", argumentList, status,
+                s.isEmpty() ? "" : "; output [" + s + "]"));
       }
       Stream.of(s.split("===\n")).forEach(s2 -> {
         if (s2.isEmpty()) {

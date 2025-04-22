@@ -251,9 +251,8 @@ public class Quidem {
         resultSet = null;
         resultSetException = null;
         final int updateCount = statement.executeUpdate(sql);
-        writer.println("(" + updateCount
-            + ((updateCount == 1) ? " row" : " rows")
-            + " modified)");
+        writer.printf("(%d%s modified)%n", updateCount,
+            (updateCount == 1) ? " row" : " rows");
       } catch (SQLException e) {
         resultSetException = e;
       } catch (Throwable e) {
@@ -1461,8 +1460,8 @@ public class Quidem {
         }
         if (e != null) {
           command.execute(x, false); // echo the command
-          x.writer().println("Error while executing command "
-              + command.describe(x));
+          x.writer().printf("Error while executing command %s%n",
+              command.describe(x));
           x.stack(e, x.writer());
           if (abort) {
             throw (Error) e;

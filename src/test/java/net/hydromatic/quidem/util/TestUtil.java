@@ -21,6 +21,7 @@ import org.apache.calcite.util.Sources;
 import java.io.File;
 import java.net.URL;
 
+import static java.lang.String.format;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import static java.util.Objects.requireNonNull;
@@ -48,9 +49,11 @@ public abstract class TestUtil {
       file = file.getParentFile();
     }
     if (!isProjectDir(file)) {
-      fail("Could not find pom.xml, build.gradle.kts or gradle.properties. "
-          + "Started with " + classFile.getAbsolutePath()
-          + ", the current path is " + file.getAbsolutePath());
+      fail(
+          format(
+              "Could not find pom.xml, build.gradle.kts or gradle.properties. "
+              + "Started with %s, the current path is %s",
+          classFile.getAbsolutePath(), file.getAbsolutePath()));
     }
     return file;
   }
