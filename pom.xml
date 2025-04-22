@@ -75,7 +75,7 @@
     <maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
     <maven-javadoc-plugin.version>3.11.2</maven-javadoc-plugin.version>
     <maven-site-plugin.version>3.21.0</maven-site-plugin.version>
-    <maven-source-plugin.version>4.0.0-beta-1</maven-source-plugin.version>
+    <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
     <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     <scott-data-hsqldb.version>0.2</scott-data-hsqldb.version>
 
